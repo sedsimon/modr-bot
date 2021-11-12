@@ -51,11 +51,11 @@ function toBlockFormat(decision) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Committed:* " + (decision.committed || ""),
+        text: "*Committed:* " + decision.committed,
       },
     });
   }
-  
+
   return block;
 }
 
