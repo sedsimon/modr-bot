@@ -21,25 +21,42 @@ let decisions = JSON.parse(raw);
  */
 
 function toBlockFormat(decision) {
-  return [
+
+  let block = [
     {
       type: "divider"
     },
-    {
+  ];
+
+  if(decision.problem) {
+    block.push({
       type: "section",
       text: {
         type: "mrkdwn",
         text: "*Problem:* " + decision.problem,
       },
+    });
+  }
+
+  block.push({
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: "*Decision:* " + (decision.decision || ""),
     },
-    {
+  });
+
+  if (decision.committed) {
+    block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Decision:* " + decision.decision,
+        text: "*Committed:* " + decision.committed,
       },
-    },
-  ];
+    });
+  }
+
+  return block;
 }
 
 app.command("/decision", async ({ command, ack, say }) => {
@@ -47,9 +64,7 @@ app.command("/decision", async ({ command, ack, say }) => {
       await ack();
       const resp = command.text.split(' ');
       switch(resp[0]) {
-        case "log":
-          // dump the entire decision log
-          console.log("dumping log of decisions");
+        case "log": // dump the entire decision log
 
           // Slack suggests use of a "text" element in case the message will
           // be printed to a system dialogue, or anywhere that block elements are

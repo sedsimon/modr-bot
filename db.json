@@ -30,8 +30,7 @@
             ]
         },
         {
-          "decision":"Go to Sammy's All Star Burger for lunch today.",
-          "problem":" "
+          "decision":"Go to Sammy's All Star Burger for lunch today."
         },
         {
           "problem":"We need to schedule events in order for our app to send slack reminders.",
