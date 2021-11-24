@@ -1,6 +1,7 @@
 const { Octokit } = require("octokit");
 const { App } = require("@slack/bolt");
 require("dotenv").config();
+
 // Initializes app with your bot token and signing secret
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -15,7 +16,7 @@ const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 // returns the list of closed pull requests. These represent committed decisions
 const closedPullRequests = `
 {
-  repository(name: "adrs", owner: "sedsimon") {
+  repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
     pullRequests(last: 10, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
       edges {
         node {
@@ -31,7 +32,7 @@ const closedPullRequests = `
 // returns the list of open pull requests. These represent active decision processes
 const openPullRequests = `
 {
-  repository(name: "adrs", owner: "sedsimon") {
+  repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
     pullRequests(last: 10, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
       edges {
         node {
@@ -43,6 +44,14 @@ const openPullRequests = `
   }
 }
 `;
+
+// usage instructions
+const usage = `
+Valid commands are: **log | help | start**
+To list decisions: \`/decision log [open|committed]\`
+To start a new decision: \`decision start <decision title>\`
+To get help: \`decision help [command]\`
+`
 
 /*
  * returns an array of block elements representing a decision log entry
@@ -56,12 +65,9 @@ const openPullRequests = `
  *  }
  * }
  */
-
-
 function toBlockFormat(edge) {
 
   const {node} = edge;
-
   let block = [
     {
       type: "divider"
@@ -105,16 +111,15 @@ app.command("/decision", async ({ command, ack, say }) => {
   try {
     await ack();
     const resp = command.text.split(' ');
+
+    // Slack suggests use of a "text" element in case the message will
+    // be printed to a system dialogue, or anywhere that block elements are
+    // not supported
+    let message = { blocks: [], text: "" };
     switch(resp[0]) {
-      case "log":
 
-        // Slack suggests use of a "text" element in case the message will
-        // be printed to a system dialogue, or anywhere that block elements are
-        // not supported
-        let message = { blocks: [], text: "Decision Log" };
-
-
-
+      case "log": {
+        message.text = "Decision Log";
         let queryString = closedPullRequests;
         let logTitle = "*Committed Decisions*";
         if (resp[1] === "open") {
@@ -138,7 +143,7 @@ app.command("/decision", async ({ command, ack, say }) => {
              edges
            }
          },
-       } = await octokit.graphql(queryString);
+        } = await octokit.graphql(queryString);
 
         // loop through JSON data pulled from database and for each decision
         // record create a new Slack block. Push the newly created block to the
@@ -149,17 +154,28 @@ app.command("/decision", async ({ command, ack, say }) => {
           });
         });
 
-        // write the message back to Slack
-        say(message);
         break;
+      }
 
-      case "start":
-        say("creating a new in-progress decision");
+      case "start": {
+        message.text = "Creating a new in-progress decision.";
         break;
+      }
 
-      default:
-        say("Yaaay! You made a decision!");
+      default: {
+        message.text = "Help Text";
+        message.blocks.push( {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: usage,
+          }
+        });
+      }
     }
+
+    // write the message to Slack
+    say(message);
   } catch (error) {
       console.log("err")
     console.error(error);
@@ -168,7 +184,7 @@ app.command("/decision", async ({ command, ack, say }) => {
 
 
 (async () => {
-  const port = 3000
+  const port = 3000;
   // Start your app
   await app.start(process.env.PORT || port);
   console.log(`⚡️ Slack Bolt app is running on port ${port}!`);
