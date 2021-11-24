@@ -118,7 +118,7 @@ app.command("/decision", async ({ command, ack, say }) => {
     // not supported
     let message = { blocks: [], text: "" };
     switch(resp[0]) {
-      case "log":
+      case "log": {
 
         message.text = "Decision Log";
         let queryString = closedPullRequests;
@@ -158,12 +158,12 @@ app.command("/decision", async ({ command, ack, say }) => {
         // write the message back to Slack
         say(message);
         break;
-
-      case "start":
+      }
+      case "start": {
         say("creating a new in-progress decision");
         break;
-
-      default:
+      }
+      default: {
         message.text = "Help Text";
         message.blocks.push( {
           type: "section",
@@ -173,6 +173,7 @@ app.command("/decision", async ({ command, ack, say }) => {
           }
         });
         say(message);
+      }
     }
   } catch (error) {
       console.log("err")
