@@ -1,6 +1,7 @@
 const { Octokit } = require("octokit");
 const { App } = require("@slack/bolt");
 require("dotenv").config();
+
 // Initializes app with your bot token and signing secret
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -51,6 +52,7 @@ To list decisions: \`/decision log [open|committed]\`
 To start a new decision: \`decision start <decision title>\`
 To get help: \`decision help [command]\`
 `
+
 /*
  * returns an array of block elements representing a decision log entry
  * that can be individually written to response using message.blocks.push().
@@ -63,12 +65,9 @@ To get help: \`decision help [command]\`
  *  }
  * }
  */
-
-
 function toBlockFormat(edge) {
 
   const {node} = edge;
-
   let block = [
     {
       type: "divider"
@@ -118,8 +117,8 @@ app.command("/decision", async ({ command, ack, say }) => {
     // not supported
     let message = { blocks: [], text: "" };
     switch(resp[0]) {
-      case "log": {
 
+      case "log": {
         message.text = "Decision Log";
         let queryString = closedPullRequests;
         let logTitle = "*Committed Decisions*";
@@ -155,14 +154,14 @@ app.command("/decision", async ({ command, ack, say }) => {
           });
         });
 
-        // write the message back to Slack
-        say(message);
         break;
       }
+
       case "start": {
-        say("creating a new in-progress decision");
+        message.text = "Creating a new in-progress decision.";
         break;
       }
+
       default: {
         message.text = "Help Text";
         message.blocks.push( {
@@ -172,9 +171,11 @@ app.command("/decision", async ({ command, ack, say }) => {
             text: usage,
           }
         });
-        say(message);
       }
     }
+
+    // write the message to Slack
+    say(message);
   } catch (error) {
       console.log("err")
     console.error(error);
@@ -183,7 +184,7 @@ app.command("/decision", async ({ command, ack, say }) => {
 
 
 (async () => {
-  const port = 3000
+  const port = 3000;
   // Start your app
   await app.start(process.env.PORT || port);
   console.log(`⚡️ Slack Bolt app is running on port ${port}!`);
