@@ -1,3 +1,4 @@
+const { Octokit } = require("octokit");
 const { App } = require("@slack/bolt");
 require("dotenv").config();
 // Initializes app with your bot token and signing secret
@@ -8,19 +9,58 @@ const app = new App({
   appToken: process.env.APP_TOKEN
 });
 
-// require the fs module that's built into Node.js
-const fs = require('fs')
-// get the raw data from the db.json file
-let raw = fs.readFileSync('db.json');
-// parse the raw bytes from the file as JSON
-let decisions = JSON.parse(raw);
+// establish github connection
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+// returns the list of closed pull requests. These represent committed decisions
+const closedPullRequests = `
+{
+  repository(name: "adrs", owner: "sedsimon") {
+    pullRequests(last: 10, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      edges {
+        node {
+          closedAt
+          title
+        }
+      }
+    }
+  }
+}
+`;
+
+// returns the list of open pull requests. These represent active decision processes
+const openPullRequests = `
+{
+  repository(name: "adrs", owner: "sedsimon") {
+    pullRequests(last: 10, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
+      edges {
+        node {
+          title
+          createdAt
+        }
+      }
+    }
+  }
+}
+`;
 
 /*
  * returns an array of block elements representing a decision log entry
- * that can be individually written to response using message.blocks.push()
+ * that can be individually written to response using message.blocks.push().
+ *
+ * takes an `edge` object that resembles:
+ * {
+ *  node: {
+ *    closedAt: dateTime,
+ *    title: string
+ *  }
+ * }
  */
 
-function toBlockFormat(decision) {
+
+function toBlockFormat(edge) {
+
+  const {node} = edge;
 
   let block = [
     {
@@ -28,30 +68,32 @@ function toBlockFormat(decision) {
     },
   ];
 
-  if(decision.problem) {
+  if(node.title) {
     block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Problem:* " + decision.problem,
+        text: "*Problem:* " + node.title,
       },
     });
   }
 
-  block.push({
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: "*Decision:* " + (decision.decision || ""),
-    },
-  });
-
-  if (decision.committed) {
+  if (node.closedAt) {
     block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Committed:* " + decision.committed,
+        text: "*Committed:* " + node.closedAt.split('T')[0],
+      },
+    });
+  }
+
+  if (node.createdAt) {
+    block.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "*Opened:* " + node.createdAt.split('T')[0],
       },
     });
   }
@@ -60,50 +102,68 @@ function toBlockFormat(decision) {
 }
 
 app.command("/decision", async ({ command, ack, say }) => {
-    try {
-      await ack();
-      const resp = command.text.split(' ');
-      switch(resp[0]) {
-        case "log": // dump the entire decision log
+  try {
+    await ack();
+    const resp = command.text.split(' ');
+    switch(resp[0]) {
+      case "log":
 
-          // Slack suggests use of a "text" element in case the message will
-          // be printed to a system dialogue, or anywhere that block elements are
-          // not supported
-          let message = { blocks: [], text: "Decision Log" };
+        // Slack suggests use of a "text" element in case the message will
+        // be printed to a system dialogue, or anywhere that block elements are
+        // not supported
+        let message = { blocks: [], text: "Decision Log" };
 
-          // push a header block for the log
-          message.blocks.push({
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "*Decision Log*",
-            },
+
+
+        let queryString = closedPullRequests;
+        let logTitle = "*Committed Decisions*";
+        if (resp[1] === "open") {
+          queryString = openPullRequests;
+          logTitle = "*Open Decisions*";
+        }
+
+        // push a header block for the log
+        message.blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: logTitle,
+          },
+        });
+
+        // `edges` is an array of node
+        const {
+         repository : {
+           pullRequests : {
+             edges
+           }
+         },
+       } = await octokit.graphql(queryString);
+
+        // loop through JSON data pulled from database and for each decision
+        // record create a new Slack block. Push the newly created block to the
+        // message response
+        edges.map(edge => {
+          toBlockFormat(edge).forEach(block => {
+            message.blocks.push(block);
           });
+        });
 
-          // loop through JSON data pulled from database and for each decision
-          // record create a new Slack block. Push the newly created block to the
-          // message response
-          decisions.data.map((decision) => {
-            toBlockFormat(decision).forEach(block => {
-              message.blocks.push(block);
-            });
-          });
+        // write the message back to Slack
+        say(message);
+        break;
 
-          // write the message back to Slack
-          say(message);
-          break;
+      case "start":
+        say("creating a new in-progress decision");
+        break;
 
-        case "start":
-          say("creating a new in-progress decision");
-          break;
-
-        default:
-          say("Yaaay! You made a decision!");
-      }
-    } catch (error) {
-        console.log("err")
-      console.error(error);
+      default:
+        say("Yaaay! You made a decision!");
     }
+  } catch (error) {
+      console.log("err")
+    console.error(error);
+  }
 });
 
 
