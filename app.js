@@ -2,6 +2,10 @@ const { Octokit } = require("octokit");
 const { App } = require("@slack/bolt");
 require("dotenv").config();
 
+const adr_re = new RegExp(process.env.GITHUB_PATH_TO_ADRS
+  + "/"
+  + process.env.GITHUB_ADR_REGEX);
+
 // Initializes app with your bot token and signing secret
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -22,6 +26,14 @@ const closedPullRequests = `
         node {
           closedAt
           title
+          url
+          files(last: 10) {
+            edges {
+              node {
+                path
+              }
+            }
+          }
         }
       }
     }
@@ -38,6 +50,14 @@ const openPullRequests = `
         node {
           title
           createdAt
+          url
+          files (last: 10){
+            edges {
+              node {
+                path
+              }
+            }
+          }
         }
       }
     }
@@ -79,7 +99,7 @@ function toBlockFormat(edge) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Problem:* " + node.title,
+        text: `*Problem:* <${node.url}|${node.title}>`,
       },
     });
   }
@@ -145,13 +165,30 @@ app.command("/decision", async ({ command, ack, say }) => {
          },
         } = await octokit.graphql(queryString);
 
-        // loop through JSON data pulled from database and for each decision
-        // record create a new Slack block. Push the newly created block to the
-        // message response
+        // loop through JSON data pulled from github
         edges.map(edge => {
-          toBlockFormat(edge).forEach(block => {
-            message.blocks.push(block);
-          });
+
+          // check for existence of a changed file that matches adr_re regex
+          let {
+            node: {
+              files: {
+                edges: changedFiles
+              }
+            }
+          } = edge;
+
+          // loop through files looking for ADRs
+          changedFiles.some(changedFile => {
+            let { node: file } = changedFile;
+            // only add the block to the response if someone changed an ADR
+            if (adr_re.test(file.path))
+            {
+              toBlockFormat(edge).forEach(block => {
+                message.blocks.push(block);
+              });
+              return true;
+            }
+          })
         });
 
         break;
