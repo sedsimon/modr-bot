@@ -1,6 +1,16 @@
-const { Octokit } = require("octokit");
-const { App } = require("@slack/bolt");
-require("dotenv").config();
+import {unified} from 'unified'
+import remarkParse from 'remark-parse'
+import remarkFrontmatter from 'remark-frontmatter'
+
+import { Octokit } from "octokit";
+import bolt from "@slack/bolt";
+import dotenv from "dotenv";
+
+const  { App } = bolt;
+
+
+dotenv.config();
+
 
 const adr_re = new RegExp(process.env.GITHUB_PATH_TO_ADRS
   + "/"
@@ -65,6 +75,7 @@ const openPullRequests = `
 }
 `;
 
+
 // usage instructions
 const usage = `
 Valid commands are: **log | help | start**
@@ -72,6 +83,32 @@ To list decisions: \`/decision log [open|committed]\`
 To start a new decision: \`decision start <decision title>\`
 To get help: \`decision help [command]\`
 `
+
+/*
+ * takes an AST and a section header, and finds the associated text under that header.
+ */
+
+function getSectionText(ast,sectionHeader) {
+  const {children} = ast;
+
+  // look for a heading at depth 2 with title matching sectionHeader.
+  // The next paragraph is the text we are after
+
+  let i = 0;
+  let pos = -1;
+  while (pos < 0 && i < children.length) {
+    if (children[i].type == "heading" && children[i].depth == 2
+      && children[i].children[0].value == sectionHeader) {
+      pos = i + 1;
+    }
+    i++;
+  }
+
+  if (pos > 0) {
+    return children[pos].children[0].value;
+  }
+}
+
 
 /*
  * returns an array of block elements representing a decision log entry
@@ -85,9 +122,42 @@ To get help: \`decision help [command]\`
  *  }
  * }
  */
-function toBlockFormat(edge) {
+async function toBlockFormat(edge, path) {
 
   const {node} = edge;
+
+
+  const pathExpr =
+    process.env.GITHUB_DEFAULT_BRANCH + ":" + path;
+
+  const adrContents = `
+  {
+    repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
+      object(expression: "${pathExpr}") {
+        ... on Blob {
+          text
+        }
+      }
+    }
+  }
+  `;
+
+  const {
+   repository : {
+     object : {
+       text
+     }
+   },
+  } = await octokit.graphql(adrContents);
+
+  const fileContents = await unified()
+    .use(remarkParse)
+    .use(remarkFrontmatter)
+    .parse(text);
+
+  const problemStatement = getSectionText(fileContents,"Problem Description");
+  const acceptedSolution = getSectionText(fileContents,"Accepted Solution");
+
   let block = [
     {
       type: "divider"
@@ -104,23 +174,59 @@ function toBlockFormat(edge) {
     });
   }
 
-  if (node.closedAt) {
+
+
+  if(problemStatement) {
     block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Committed:* " + node.closedAt.split('T')[0],
+        text: problemStatement,
       },
+    });
+  }
+
+  if(acceptedSolution) {
+    block.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "*Accepted Solution*",
+      },
+    });
+
+
+    block.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: acceptedSolution,
+      },
+    });
+
+  }
+
+  if (node.closedAt) {
+    block.push({
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: "*Committed:* " + node.closedAt.split('T')[0],
+        },
+      ]
     });
   }
 
   if (node.createdAt) {
     block.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "*Opened:* " + node.createdAt.split('T')[0],
-      },
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: "*Opened:* " + node.createdAt.split('T')[0],
+        },
+      ]
     });
   }
 
@@ -141,17 +247,17 @@ app.command("/decision", async ({ command, ack, say }) => {
       case "log": {
         message.text = "Decision Log";
         let queryString = closedPullRequests;
-        let logTitle = "*Committed Decisions*";
+        let logTitle = "Committed Decisions";
         if (resp[1] === "open") {
           queryString = openPullRequests;
-          logTitle = "*Open Decisions*";
+          logTitle = "Open Decisions";
         }
 
         // push a header block for the log
         message.blocks.push({
-          type: "section",
+          type: "header",
           text: {
-            type: "mrkdwn",
+            type: "plain_text",
             text: logTitle,
           },
         });
@@ -166,7 +272,10 @@ app.command("/decision", async ({ command, ack, say }) => {
         } = await octokit.graphql(queryString);
 
         // loop through JSON data pulled from github
-        edges.map(edge => {
+        await edges.reduce(async (prev, edge) => {
+
+          // wait for the previous message to get pushed
+          await prev;
 
           // check for existence of a changed file that matches adr_re regex
           let {
@@ -177,19 +286,28 @@ app.command("/decision", async ({ command, ack, say }) => {
             }
           } = edge;
 
+          let adrFile = null;
           // loop through files looking for ADRs
           changedFiles.some(changedFile => {
             let { node: file } = changedFile;
             // only add the block to the response if someone changed an ADR
             if (adr_re.test(file.path))
             {
-              toBlockFormat(edge).forEach(block => {
-                message.blocks.push(block);
-              });
+              adrFile = file.path;
               return true;
             }
-          })
-        });
+          });
+
+          if (adrFile) {
+
+            const blocks = await toBlockFormat(edge,adrFile);
+
+            blocks.forEach(block => {
+              message.blocks.push(block);
+            });
+
+          }
+        },undefined);
 
         break;
       }
