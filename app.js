@@ -89,6 +89,8 @@ To get help: \`decision help [command]\`
  */
 
 function getSectionText(ast,sectionHeader) {
+  
+  // 'children' is an array of markdown blocks, such as headers, paragraphs, lists etc
   const {children} = ast;
 
   // look for a heading at depth 2 with title matching sectionHeader.
@@ -98,13 +100,17 @@ function getSectionText(ast,sectionHeader) {
   let pos = -1;
   while (pos < 0 && i < children.length) {
     if (children[i].type == "heading" && children[i].depth == 2
-      && children[i].children[0].value == sectionHeader) {
+    && children[i].children[0].value == sectionHeader) {
+
+      // if we find a match, the next object is the paragraph we are after
       pos = i + 1;
     }
     i++;
   }
 
   if (pos > 0) {
+
+    // the content of the paragraph is in a 'children' sub-element
     return children[pos].children[0].value;
   }
 }
@@ -124,8 +130,8 @@ function getSectionText(ast,sectionHeader) {
  */
 async function toBlockFormat(edge, path) {
 
+  // edge represents a pull request
   const {node} = edge;
-
 
   const pathExpr =
     process.env.GITHUB_DEFAULT_BRANCH + ":" + path;
@@ -142,6 +148,7 @@ async function toBlockFormat(edge, path) {
   }
   `;
 
+  // get the file contents from github
   const {
    repository : {
      object : {
@@ -150,6 +157,7 @@ async function toBlockFormat(edge, path) {
    },
   } = await octokit.graphql(adrContents);
 
+  // create an Abstract Syntax Tree (ast) by parsing the markdown file
   const fileContents = await unified()
     .use(remarkParse)
     .use(remarkFrontmatter)
@@ -164,6 +172,7 @@ async function toBlockFormat(edge, path) {
     },
   ];
 
+  // push the pull request title with a link to the pull request
   if(node.title) {
     block.push({
       type: "section",
@@ -262,7 +271,8 @@ app.command("/decision", async ({ command, ack, say }) => {
           },
         });
 
-        // `edges` is an array of node
+        // `edges` is an array of node objects
+        // each node object represents a pull request
         const {
          repository : {
            pullRequests : {
@@ -272,6 +282,8 @@ app.command("/decision", async ({ command, ack, say }) => {
         } = await octokit.graphql(queryString);
 
         // loop through JSON data pulled from github
+        // since we use async calls in this loop, utilize arr.reduce(prev,curr)
+        // to ensure they are resolved and return in order
         await edges.reduce(async (prev, edge) => {
 
           // wait for the previous message to get pushed
@@ -298,6 +310,8 @@ app.command("/decision", async ({ command, ack, say }) => {
             }
           });
 
+          // if we find an adr file that is part of the pull request, convert it
+          // to Slack block format and push it to the message body
           if (adrFile) {
 
             const blocks = await toBlockFormat(edge,adrFile);
