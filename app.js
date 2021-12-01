@@ -12,9 +12,7 @@ const  { App } = bolt;
 dotenv.config();
 
 
-const adr_re = new RegExp(process.env.GITHUB_PATH_TO_ADRS
-  + "/"
-  + process.env.GITHUB_ADR_REGEX);
+const adr_re = new RegExp(process.env.GITHUB_ADR_REGEX);
 
 // Initializes app with your bot token and signing secret
 const app = new App({
@@ -26,6 +24,27 @@ const app = new App({
 
 // establish github connection
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+
+// gets the contents of the adr directory
+const adrContents = `
+  {
+    repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
+      object(expression: "${process.env.GITHUB_DEFAULT_BRANCH}:${process.env.GITHUB_PATH_TO_ADRS}") {
+        ... on Tree {
+          entries {
+            name
+            object {
+              ... on Blob {
+                text
+              }
+            }
+          }
+          
+        }
+      }
+    }
+  }
+  `;
 
 // returns the list of closed pull requests. These represent committed decisions
 const closedPullRequests = `
@@ -88,31 +107,32 @@ To get help: \`decision help [command]\`
  * takes an AST and a section header, and finds the associated text under that header.
  */
 
-function getSectionText(ast,sectionHeader) {
+function adrToJSON(ast) {
   
   // 'children' is an array of markdown blocks, such as headers, paragraphs, lists etc
   const {children} = ast;
 
-  // look for a heading at depth 2 with title matching sectionHeader.
-  // The next paragraph is the text we are after
+  let jsonObj = {};
 
-  let i = 0;
-  let pos = -1;
-  while (pos < 0 && i < children.length) {
-    if (children[i].type == "heading" && children[i].depth == 2
-    && children[i].children[0].value == sectionHeader) {
+  // the AST should start with the YAML frontmatter, and should have a title section next
+  if (children.length > 1) {
+    // get the title - this is at position [1] and has depth of 1
+    jsonObj.title = children[1].children[0].value;
+    
+    // The next paragraph is the text we are after
 
-      // if we find a match, the next object is the paragraph we are after
-      pos = i + 1;
+    let i = 0;
+
+    while (i < children.length) {
+      if (children[i].type == "heading" && children[i].depth == 2) {
+        // found a section header
+        jsonObj[children[i].children[0].value] = children[i+1].children[0].value;
+      }
+
+      i++;
     }
-    i++;
   }
-
-  if (pos > 0) {
-
-    // the content of the paragraph is in a 'children' sub-element
-    return children[pos].children[0].value;
-  }
+  return jsonObj;
 }
 
 
@@ -120,51 +140,28 @@ function getSectionText(ast,sectionHeader) {
  * returns an array of block elements representing a decision log entry
  * that can be individually written to response using message.blocks.push().
  *
- * takes an `edge` object that resembles:
+ * takes an `adrFile` object that resembles:
  * {
- *  node: {
- *    closedAt: dateTime,
- *    title: string
+ *  name: <filename>,
+ *  object: {
+ *    text: <file contents>
  *  }
  * }
  */
-async function toBlockFormat(edge, path) {
+async function toBlockFormat(adrFile) {
 
-  // edge represents a pull request
-  const {node} = edge;
+  const {fileName} = adrFile;
 
-  const pathExpr =
-    process.env.GITHUB_DEFAULT_BRANCH + ":" + path;
-
-  const adrContents = `
-  {
-    repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
-      object(expression: "${pathExpr}") {
-        ... on Blob {
-          text
-        }
-      }
-    }
-  }
-  `;
-
-  // get the file contents from github
-  const {
-   repository : {
-     object : {
-       text
-     }
-   },
-  } = await octokit.graphql(adrContents);
+  const {object: {text}} = adrFile;
 
   // create an Abstract Syntax Tree (ast) by parsing the markdown file
-  const fileContents = await unified()
+  const adrAST = await unified()
     .use(remarkParse)
     .use(remarkFrontmatter)
     .parse(text);
 
-  const problemStatement = getSectionText(fileContents,"Problem Description");
-  const acceptedSolution = getSectionText(fileContents,"Accepted Solution");
+
+  const adrJsonObj = adrToJSON(adrAST);
 
   let block = [
     {
@@ -173,29 +170,29 @@ async function toBlockFormat(edge, path) {
   ];
 
   // push the pull request title with a link to the pull request
-  if(node.title) {
+  if(adrJsonObj.title) {
     block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*Problem:* <${node.url}|${node.title}>`,
+        text: `*Problem:* ${adrJsonObj.title}`,
       },
     });
   }
 
 
 
-  if(problemStatement) {
+  if(adrJsonObj["Problem Description"]) {
     block.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: problemStatement,
+        text: adrJsonObj["Problem Description"],
       },
     });
   }
 
-  if(acceptedSolution) {
+  if(adrJsonObj["Accepted Solution"]) {
     block.push({
       type: "section",
       text: {
@@ -209,12 +206,12 @@ async function toBlockFormat(edge, path) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: acceptedSolution,
+        text: adrJsonObj["Accepted Solution"],
       },
     });
 
   }
-
+/*
   if (node.closedAt) {
     block.push({
       type: "context",
@@ -238,7 +235,7 @@ async function toBlockFormat(edge, path) {
       ]
     });
   }
-
+*/
   return block;
 }
 
@@ -262,6 +259,15 @@ app.command("/decision", async ({ command, ack, say }) => {
           logTitle = "Open Decisions";
         }
 
+        // returns an array of adr files including contents
+        const {
+          repository : {
+            object : {
+              entries: adrFiles
+            }
+          },
+         } = await octokit.graphql(adrContents);
+
         // push a header block for the log
         message.blocks.push({
           type: "header",
@@ -271,56 +277,28 @@ app.command("/decision", async ({ command, ack, say }) => {
           },
         });
 
-        // `edges` is an array of node objects
-        // each node object represents a pull request
-        const {
-         repository : {
-           pullRequests : {
-             edges
-           }
-         },
-        } = await octokit.graphql(queryString);
-
-        // loop through JSON data pulled from github
+        // loop through list of adrFiles, format contents as Slack blocks and
+        // push them to the message
         // since we use async calls in this loop, utilize arr.reduce(prev,curr)
         // to ensure they are resolved and return in order
-        await edges.reduce(async (prev, edge) => {
+        await adrFiles.reduce(async (prev, adrFile) => {
 
           // wait for the previous message to get pushed
           await prev;
 
-          // check for existence of a changed file that matches adr_re regex
-          let {
-            node: {
-              files: {
-                edges: changedFiles
-              }
-            }
-          } = edge;
-
-          let adrFile = null;
-          // loop through files looking for ADRs
-          changedFiles.some(changedFile => {
-            let { node: file } = changedFile;
-            // only add the block to the response if someone changed an ADR
-            if (adr_re.test(file.path))
-            {
-              adrFile = file.path;
-              return true;
-            }
-          });
-
-          // if we find an adr file that is part of the pull request, convert it
-          // to Slack block format and push it to the message body
-          if (adrFile) {
-
-            const blocks = await toBlockFormat(edge,adrFile);
+          // only add the block to the response if someone changed an ADR
+          if (adr_re.test(adrFile.name))
+          {
+            // if we find an adr file that is part of the pull request, convert it
+            // to Slack block format and push it to the message body
+          
+            const blocks = await toBlockFormat(adrFile);
 
             blocks.forEach(block => {
               message.blocks.push(block);
             });
-
           }
+            
         },undefined);
 
         break;
