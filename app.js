@@ -156,7 +156,13 @@ function adrToJSON(ast) {
  */
 async function toBlockFormat(adrFile) {
 
-  const {fileName} = adrFile;
+  const {name: fileName} = adrFile;
+
+  const githubUrlForFile = "https://github.com/"
+    + process.env.GITHUB_USER + "/" + process.env.GITHUB_REPO
+    + "/blob/" + process.env.GITHUB_DEFAULT_BRANCH
+    + "/" + process.env.GITHUB_PATH_TO_ADRS + "/" + fileName;
+
 
   const {object: {text}} = adrFile;
 
@@ -181,7 +187,7 @@ async function toBlockFormat(adrFile) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*Problem:* ${adrJsonObj.title}`,
+        text: `*Problem:* <${githubUrlForFile}|${adrJsonObj.title}>`,
       },
     });
   }
