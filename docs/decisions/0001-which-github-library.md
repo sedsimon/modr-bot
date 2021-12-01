@@ -1,8 +1,8 @@
 ---
-impact:3
-reversability:3
-status:committed
-decide-by""2022-11-23"
+impact: 3
+reversability: 3
+status: committed
+decide-by: "2022-11-23"
 ---
 # Title
 Which github library should we use to connect to APIs?

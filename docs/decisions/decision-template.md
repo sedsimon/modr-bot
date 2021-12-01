@@ -1,12 +1,12 @@
 ---
-impact:1
-reversability:5
-status:open|committed|deferred|obsolete
-tags:
+impact: 1
+reversability: 5
+status: open|committed|deferred|obsolete
+tags: 
   - tag1
   - tag2
-review-by:"2022-01-01"
-decide-by""2022-12-15"
+review-by: "2022-01-01"
+decide-by: "2022-12-15"
 ---
 # Title
 Short description that can fit on one line in title font.

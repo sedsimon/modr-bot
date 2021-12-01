@@ -1,11 +1,11 @@
 ---
-impact:1
-reversability:5
-status:committed
-tags:
+impact: 1
+reversability: 5
+status: committed
+tags: 
   - product
-review-by:"2022-01-01"
-decide-by""2021-11-25"
+review-by: "2022-01-01"
+decide-by: "2021-11-25"
 ---
 # Title
 Which feature should I build next on the MVP?
