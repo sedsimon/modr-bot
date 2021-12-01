@@ -1,6 +1,7 @@
 import {unified} from 'unified'
 import remarkParse from 'remark-parse'
 import remarkFrontmatter from 'remark-frontmatter'
+import YAML from 'yaml'
 
 import { Octokit } from "octokit";
 import bolt from "@slack/bolt";
@@ -114,6 +115,11 @@ function adrToJSON(ast) {
 
   let jsonObj = {};
 
+  // look for YAML frontmatter
+  if (children[0].type == "yaml") {
+    jsonObj.frontmatter = YAML.parse(children[0].value);
+  }
+
   // the AST should start with the YAML frontmatter, and should have a title section next
   if (children.length > 1) {
     // get the title - this is at position [1] and has depth of 1
@@ -169,7 +175,7 @@ async function toBlockFormat(adrFile) {
     },
   ];
 
-  // push the pull request title with a link to the pull request
+  // push the adr title
   if(adrJsonObj.title) {
     block.push({
       type: "section",
@@ -211,31 +217,42 @@ async function toBlockFormat(adrFile) {
     });
 
   }
-/*
-  if (node.closedAt) {
+
+  // if there is frontmatter, add that as a Context block in slack message
+  if (adrJsonObj.frontmatter && (
+    adrJsonObj.frontmatter.status
+    || adrJsonObj.frontmatter.committed
+    || adrJsonObj.frontmatter["decide-by"]
+    || adrJsonObj.frontmatter["review-by"])
+    ) {
+    
+    // create reader friendly versions of the frontmatter properties
+    const labels = {
+      status: "Status",
+      committed: "Committed On",
+      "decide-by": "Decide By",
+      "review-by": "Review By"
+    };
+    
+    const elements = [];
+    for (const property in labels) {
+      
+      // add a context element if there is a matching property in the frontmatter
+      if (adrJsonObj.frontmatter[property]) {
+        elements.push(
+          {
+            type: "mrkdwn",
+            text: `*${labels[property]}*: ${adrJsonObj.frontmatter[property]}`,            
+          }
+        );
+      }
+    }
     block.push({
       type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: "*Committed:* " + node.closedAt.split('T')[0],
-        },
-      ]
+      elements: elements
     });
   }
 
-  if (node.createdAt) {
-    block.push({
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: "*Opened:* " + node.createdAt.split('T')[0],
-        },
-      ]
-    });
-  }
-*/
   return block;
 }
 
