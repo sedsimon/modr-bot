@@ -175,7 +175,7 @@ async function toBlockFormat(adrFile) {
     },
   ];
 
-  // push the pull request title with a link to the pull request
+  // push the adr title
   if(adrJsonObj.title) {
     block.push({
       type: "section",
@@ -218,6 +218,7 @@ async function toBlockFormat(adrFile) {
 
   }
 
+  // if there is frontmatter, add that as a Context block in slack message
   if (adrJsonObj.frontmatter && (
     adrJsonObj.frontmatter.status
     || adrJsonObj.frontmatter.committed
@@ -225,6 +226,7 @@ async function toBlockFormat(adrFile) {
     || adrJsonObj.frontmatter["review-by"])
     ) {
     
+    // create reader friendly versions of the frontmatter properties
     const labels = {
       status: "Status",
       committed: "Committed On",
@@ -234,6 +236,8 @@ async function toBlockFormat(adrFile) {
     
     const elements = [];
     for (const property in labels) {
+      
+      // add a context element if there is a matching property in the frontmatter
       if (adrJsonObj.frontmatter[property]) {
         elements.push(
           {
