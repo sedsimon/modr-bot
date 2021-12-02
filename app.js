@@ -48,40 +48,17 @@ const adrContents = `
   `;
 
 // returns the list of closed pull requests. These represent committed decisions
-const closedPullRequests = `
+const getPullRequests = `
 {
   repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
-    pullRequests(last: 10, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(last: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
       edges {
         node {
           closedAt
           title
+          body
           url
           files(last: 10) {
-            edges {
-              node {
-                path
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`;
-
-// returns the list of open pull requests. These represent active decision processes
-const openPullRequests = `
-{
-  repository(name: "${process.env.GITHUB_REPO}", owner: "${process.env.GITHUB_USER}") {
-    pullRequests(last: 10, states: OPEN, orderBy: {field: CREATED_AT, direction: DESC}) {
-      edges {
-        node {
-          title
-          createdAt
-          url
-          files (last: 10){
             edges {
               node {
                 path
@@ -103,6 +80,37 @@ To list decisions: \`/decision log [open|committed]\`
 To start a new decision: \`decision start <decision title>\`
 To get help: \`decision help [command]\`
 `
+
+/*
+ * takes response from github graphql and returns an object
+ * who's keys are file names and values are arrays containing
+ * the pull requests in which the file got changed
+ * 
+ * pullRequest is an array of edge objects. Each edge has a node which contains the pull request information
+ */
+
+function getPullRequestsByFile(pullRequests) {
+  let pullRequestsByFile = {};
+
+  for (const pr_edge of pullRequests) {
+    
+    const pullRequest = {
+      title: pr_edge.node.title,
+      url: pr_edge.node.url,
+      body: pr_edge.node.body
+    };
+
+    for (const file_edge of pr_edge.node.files.edges) {
+      const filePath = file_edge.node.path;
+      if (!pullRequestsByFile[filePath]){
+        pullRequestsByFile[filePath] = [];
+      }
+      pullRequestsByFile[filePath].push(pullRequest);
+    }
+  }
+
+  return pullRequestsByFile;
+}
 
 /*
  * takes an AST and a section header, and finds the associated text under that header.
@@ -189,6 +197,15 @@ async function toBlockFormat(adrFile) {
         type: "mrkdwn",
         text: `*Problem:* <${githubUrlForFile}|${adrJsonObj.title}>`,
       },
+			accessory: {
+				type: "button",
+				text: {
+					type: "plain_text",
+					text: "List PRs",
+				},
+				value: fileName,
+				action_id: "list prs action"
+			}
     });
   }
 
@@ -262,6 +279,97 @@ async function toBlockFormat(adrFile) {
   return block;
 }
 
+/*
+ * respond to a user clicking the "View PRs" button by opening a modal with
+ * a list of PRs for that file.
+ * 
+ * action passes in the name of the file we are interested in
+ */
+
+app.action("list prs action", async({body, ack, client, action}) => {
+  try {
+    await ack();
+    const fileName = process.env.GITHUB_PATH_TO_ADRS + "/" + action.value;
+
+    // get a list of all the pull requests for the repo (ouch)
+    const {
+      repository : {
+        pullRequests : {
+          edges : allPullRequests
+        }
+      }
+    } = await octokit.graphql(getPullRequests);
+
+    // loop through the pull requests and organize them according to files changed.
+    // pullRequestsByFile is a map of pull requests indexed by file
+    const pullRequestsByFile = getPullRequestsByFile(allPullRequests);
+
+    // get the pull requests for the file we're interested in
+    const pullRequestsForFile = pullRequestsByFile[fileName];
+
+    // create the modal object to display the pull requests
+    let modal = {
+      trigger_id: body.trigger_id,
+      view: {
+        type: "modal",
+        callback_id: "modal_1",
+        title: {
+          type: "plain_text",
+          text: "Pull Requests"
+        },
+        close: {
+          type: "plain_text",
+          text: "Close"
+        },
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: fileName
+            }
+          },
+          {
+            type: "divider"
+          },
+        ]
+      },
+    };
+
+    // loop through pull requests and add a row in the modal for each
+    for (const pullRequest of pullRequestsForFile) {
+      modal.view.blocks.push({
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
+        }
+      });
+      // keep this in for now, will add real data later
+      modal.view.blocks.push({
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "Status: *OPEN*"
+          },
+          {
+            type: "mrkdwn",
+            text: "Created: 2021-11-01"
+          }
+        ]
+      });
+    }
+
+    // open the modal
+    const result = await client.views.open(modal);
+
+  } catch (error) {
+    console.log("err")
+    console.error(error);
+  }
+});
+
 app.command("/decision", async ({ command, ack, say }) => {
   try {
     await ack();
@@ -275,10 +383,8 @@ app.command("/decision", async ({ command, ack, say }) => {
 
       case "log": {
         message.text = "Decision Log";
-        let queryString = closedPullRequests;
         let logTitle = "Committed Decisions";
         if (resp[1] === "open") {
-          queryString = openPullRequests;
           logTitle = "Open Decisions";
         }
 
@@ -289,7 +395,7 @@ app.command("/decision", async ({ command, ack, say }) => {
               entries: adrFiles
             }
           },
-         } = await octokit.graphql(adrContents);
+        } = await octokit.graphql(adrContents);
 
         // push a header block for the log
         message.blocks.push({
