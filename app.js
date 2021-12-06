@@ -1,17 +1,16 @@
 import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
 
 import bolt from "@slack/bolt";
-import {env} from "./lib/config.js"
 
 const  { App } = bolt;
 
 
 // Initializes app with your bot token and signing secret
 const app = new App({
-  token: env.SLACK_BOT_TOKEN,
-  signingSecret: env.SLACK_SIGNING_SECRET,
+  token: process.env.SLACK_BOT_TOKEN,
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
   socketMode:true, // enable the following to use socket mode
-  appToken: env.APP_TOKEN
+  appToken: process.env.APP_TOKEN
 });
 
 // usage instructions
