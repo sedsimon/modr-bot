@@ -1,6 +1,6 @@
 ---
-impact: 1
-reversability: 5
+impact: low|medium|high
+reversability: low|medium|high
 status: open|committed|deferred|obsolete
 tags: 
   - tag1
@@ -8,8 +8,7 @@ tags:
 review-by: "2022-01-01"
 decide-by: "2022-12-15"
 ---
-# Title
-Short description that can fit on one line in title font.
+# Title - Short description that can fit on one line in title font.
 
 ## Problem Description
 Briefly and clearly describe the problem. This should be fact based. What are
