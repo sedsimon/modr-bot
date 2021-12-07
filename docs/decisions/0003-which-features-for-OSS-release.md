@@ -1,6 +1,6 @@
 ---
-impact: 7
-reversability: 6
+impact: medium
+reversibility: medium
 status: committed
 tags: 
   - product
