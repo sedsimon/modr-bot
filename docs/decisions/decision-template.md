@@ -1,6 +1,6 @@
 ---
 impact: low|medium|high
-reversability: low|medium|high
+reversibility: low|medium|high
 status: open|committed|deferred|obsolete
 tags: 
   - tag1
