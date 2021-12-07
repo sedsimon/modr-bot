@@ -1,6 +1,6 @@
 ---
-impact: 3
-reversability: 3
+impact: low
+reversability: low
 status: committed
 decide-by: "2022-11-23"
 ---
