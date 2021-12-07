@@ -26,6 +26,7 @@ I am driving towards releasing an OSS version of the Slack app. I need to decide
 1. customize templates
 1. filter by status, impact, committed-on, decide-by, tags
 1. documentation for installing
+1. documentation for how to get started with ADRs
 1. Slack app to marketplace
 
 ## Expected Outcome
@@ -44,6 +45,7 @@ Will have a product I can show to people and collect feedback on. Will be usable
 1. caching of results from github
 1. documentation for installing
 1. Slack app to marketplace
+1. Documentation for how to get started with ADRs
 
 ## People
 **Decision Maker**: Simon Stanlake
