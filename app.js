@@ -237,15 +237,45 @@ function checkFilter(frontmatter, options) {
 
 }
 
-app.command("/decision", async ({ command, ack, say }) => {
+app.command("/decision", async ({ command, ack, respond }) => {
   try {
     await ack();
 
-    let message = { blocks: [], text: "" };
+    let message = { blocks: [], text: "", response_type: "ephemeral" };
 
     const program = new Command();
 
-    program.command("log")
+    program.exitOverride();
+
+    program
+      .configureOutput({
+        
+        writeOut: (str) => {
+          message.text = "Help Text";
+          message.blocks.push( {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "```" + str + "```",
+            }
+          });
+          respond(message);
+        },
+        writeErr: (str) => {
+          message.text = "Help Text";
+          message.blocks.push( {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "```" + str + "```",
+            }
+          });
+          respond(message);
+        },
+        
+      });
+
+    program.name("/decision").command("log")
       .addOption(new Option("-s, --status <status...>","ADR Status").choices(["open","committed","deferred","obsolete"]))
       .addOption(new Option("-i, --impact <impact...>","Impact").choices(["high","medium","low"]))
       .option("-t, --tags <tag...>","Return ADRs that match one of the supplied tags")
@@ -282,10 +312,10 @@ app.command("/decision", async ({ command, ack, say }) => {
         }
       });
 
-      // kludge - commander expects a process.argv type string array
-      const argv = "slack decision " + command.text;
-      await program.parseAsync(split(argv));
+      // don't exit on parse error
+      
 
+      await program.parseAsync(split(command.text),{from: "user"});
 
 /*
       case "start": {
@@ -306,7 +336,7 @@ app.command("/decision", async ({ command, ack, say }) => {
     }
 */
     // write the message to Slack
-    say(message);
+    respond(message);
   } catch (error) {
       console.log("err")
     console.error(error);
