@@ -1,5 +1,5 @@
 import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
-import {Command, InvalidArgumentError, Option, program} from "commander"
+import {Command, InvalidArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
 import {split} from "shlex"
 
@@ -205,6 +205,9 @@ app.action("list prs action", async({body, ack, client, action}) => {
   }
 });
 
+/*
+ * look for a date of format yyyy-mm-dd and throw InvalidArgumetnError if none found
+ */
 function myParseDate(datestr) {
   const date_ms = Date.parse(datestr);
   if (isNaN(date_ms)) {
@@ -270,12 +273,17 @@ app.command("/decision", async ({ command, ack, respond }) => {
   try {
     await ack();
 
+    // 'ephemeral' type means only the user calling the command will see the result
     let message = { blocks: [], text: "", response_type: "ephemeral" };
 
     const program = new Command();
 
+    // by default commander calls process.exit if it finds an error or displays help.
+    // override this behaviour
     program.exitOverride();
 
+    // by default commander writes to stdout and stderr. Instead, capture these and send
+    // back to slack as code blocks
     program
       .configureOutput({
         
@@ -342,10 +350,7 @@ app.command("/decision", async ({ command, ack, respond }) => {
           }
             
         }
-      });
-
-      // don't exit on parse error
-      
+      });      
 
       await program.parseAsync(split(command.text),{from: "user"});
 
