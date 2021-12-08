@@ -1,9 +1,9 @@
 import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
-
+import {Command, InvalidArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
+import {split} from "shlex"
 
 const  { App } = bolt;
-
 
 // Initializes app with your bot token and signing secret
 const app = new App({
@@ -12,14 +12,6 @@ const app = new App({
   socketMode:true, // enable the following to use socket mode
   appToken: process.env.SLACK_APP_TOKEN
 });
-
-// usage instructions
-const usage = `
-Valid commands are: **log | help | start**
-To list decisions: \`/decision log [open|committed]\`
-To start a new decision: \`decision start <decision title>\`
-To get help: \`decision help [command]\`
-`
 
 /*
  * returns an array of block elements representing a decision log entry
@@ -213,24 +205,126 @@ app.action("list prs action", async({body, ack, client, action}) => {
   }
 });
 
-app.command("/decision", async ({ command, ack, say }) => {
+/*
+ * look for a date of format yyyy-mm-dd and throw InvalidArgumetnError if none found
+ */
+function myParseDate(datestr) {
+  const date_ms = Date.parse(datestr);
+  if (isNaN(date_ms)) {
+    throw new InvalidArgumentError("Error: unable to parse date " + datestr + ". Must be yyyy-mm-dd format.");
+  }
+  return date_ms;
+}
+
+function checkFilter(frontmatter, options) {
+
+  // if no options passed, accept everything
+  if (Object.keys(options).length === 0) {return true;}
+
+  // if options are passed and there's no frontmatter, skip it
+  if (!frontmatter) {return false;}
+
+  // if status is specified look for a match
+  if (options.status && !options.status.includes(frontmatter.status)) {
+    return false;
+  }
+
+  // if impact is specified look for a match
+  if (options.impact && !options.impact.includes(frontmatter.impact)) {
+    return false;
+  }
+
+  // if committed-after is specified, filter ADRs that have an earlier committed-on
+  if (options.committedAfter){
+    const committed_on = Date.parse(frontmatter["committed-on"])
+    if (isNaN(committed_on) || options.committedAfter > committed_on) {
+      return false;
+    }
+  }
+
+  // if decide-before is specified, filter ADRs that have a later decide-by
+  if (options.decideBefore){
+    
+    // status must be "open"
+    if (frontmatter.status != "open"){
+      return false;
+    }
+
+    const decide_by = Date.parse(frontmatter["decide-by"])
+    if (isNaN(decide_by) || options.decideBefore < decide_by) {
+      return false;
+    }
+  }
+  // if tags are specified, look for a match among the list of tags
+  if (options.tags) {
+     for (const tag of options.tags) {
+       if (frontmatter.tags.includes(tag)) {
+         return true;
+       }
+     }
+     return false;
+  }
+
+  return true;
+
+}
+
+app.command("/decision", async ({ command, ack, respond }) => {
   try {
     await ack();
-    const resp = command.text.split(' ');
 
-    // Slack suggests use of a "text" element in case the message will
-    // be printed to a system dialogue, or anywhere that block elements are
-    // not supported
-    let message = { blocks: [], text: "" };
-    switch(resp[0]) {
+    // 'ephemeral' type means only the user calling the command will see the result
+    let message = { blocks: [], text: "", response_type: "ephemeral" };
 
-      case "log": {
+    const program = new Command();
+
+    // by default commander calls process.exit if it finds an error or displays help.
+    // override this behaviour
+    program.exitOverride();
+
+    // by default commander writes to stdout and stderr. Instead, capture these and send
+    // back to slack as code blocks
+    program
+      .configureOutput({
+        
+        writeOut: (str) => {
+          message.text = "Help Text";
+          message.blocks.push( {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "```" + str + "```",
+            }
+          });
+          respond(message);
+        },
+        writeErr: (str) => {
+          message.text = "Help Text";
+          message.blocks.push( {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "```" + str + "```",
+            }
+          });
+          respond(message);
+        },
+        
+      });
+
+    program.name("/decision").command("log")
+      .description("List ADRs that match all of the given (optional) filters.")
+      .addOption(new Option("-s, --status <status...>","Filter on ADR status.").choices(["open","committed","deferred","obsolete"]))
+      .addOption(new Option("-i, --impact <impact...>","Filter on ADR Impact.").choices(["high","medium","low"]))
+      .option("-ca, --committed-after <date>","Filter ADRs committed since the given date (yyyy-mm-dd format).",myParseDate)
+      .option("-db, --decide-before <date>","Filter open ADRs that must be decided on before the given date (yyyy-mm-dd format).",myParseDate)
+      .option("-t, --tags <tag...>","Filter on ADR tags.")
+      .action(async (options,command) => {
         message.text = "Decision Log";
         let logTitle = "Committed Decisions";
-        if (resp[1] === "open") {
+        if (options.status == "open") {
           logTitle = "Open Decisions";
         }
-
         // push a header block for the log
         message.blocks.push({
           type: "header",
@@ -240,23 +334,27 @@ app.command("/decision", async ({ command, ack, say }) => {
           },
         });
 
-        const adrFiles = await getAdrFiles();
+        const adrFiles = await getAdrFiles(options);
 
         for (const adrFile of adrFiles) {
 
-          // convert adr file to Slack block format and push it to the message body
-        
-          const blocks = toBlockFormat(adrFile);
+          if (checkFilter(adrFile.data.frontmatter,options)) {
+            // convert adr file to Slack block format and push it to the message body
+          
+            const blocks = toBlockFormat(adrFile);
 
-          blocks.forEach(block => {
-            message.blocks.push(block);
-          });
+            blocks.forEach(block => {
+              message.blocks.push(block);
+            });
+
+          }
             
         }
+      });      
 
-        break;
-      }
+      await program.parseAsync(split(command.text),{from: "user"});
 
+/*
       case "start": {
         message.text = "Creating a new in-progress decision.";
         break;
@@ -273,9 +371,9 @@ app.command("/decision", async ({ command, ack, say }) => {
         });
       }
     }
-
+*/
     // write the message to Slack
-    say(message);
+    respond(message);
   } catch (error) {
       console.log("err")
     console.error(error);

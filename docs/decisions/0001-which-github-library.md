@@ -4,8 +4,7 @@ reversibility: low
 status: committed
 decide-by: "2022-11-23"
 ---
-# Title
-Which github library should we use to connect to APIs?
+# Which github library should we use to connect to APIs?
 
 ## Problem Description
 We need a library to access github api. There are several options available.

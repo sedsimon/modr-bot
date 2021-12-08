@@ -7,8 +7,7 @@ tags:
 review-by: "2022-01-01"
 decide-by: "2021-11-25"
 ---
-# Title
-Which feature should I build next on the MVP?
+# Which feature should I build next on the MVP?
 
 ## Problem Description
 Need to choose a next feature to work on.

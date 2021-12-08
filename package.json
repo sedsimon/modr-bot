@@ -13,9 +13,11 @@
   "license": "ISC",
   "dependencies": {
     "@slack/bolt": "^3.8.1",
+    "commander": "^8.3.0",
     "octokit": "^1.7.1",
     "remark-frontmatter": "^4.0.1",
     "remark-parse": "^10.0.1",
+    "shlex": "^2.1.0",
     "yaml": "^1.10.2"
   },
   "devDependencies": {
