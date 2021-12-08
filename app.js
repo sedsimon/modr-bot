@@ -1,5 +1,5 @@
 import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
-import {Command, Option} from "commander"
+import {Command, InvalidArgumentError, Option, program} from "commander"
 import bolt from "@slack/bolt";
 import {split} from "shlex"
 
@@ -205,6 +205,14 @@ app.action("list prs action", async({body, ack, client, action}) => {
   }
 });
 
+function myParseDate(datestr) {
+  const date_ms = Date.parse(datestr);
+  if (isNaN(date_ms)) {
+    throw new InvalidArgumentError("Error: unable to parse date " + datestr + ". Must be yyyy-mm-dd format.");
+  }
+  return date_ms;
+}
+
 function checkFilter(frontmatter, options) {
 
   // if no options passed, accept everything
@@ -223,6 +231,27 @@ function checkFilter(frontmatter, options) {
     return false;
   }
 
+  // if committed-after is specified, filter ADRs that have an earlier committed-on
+  if (options.committedAfter){
+    const committed_on = Date.parse(frontmatter["committed-on"])
+    if (isNaN(committed_on) || options.committedAfter > committed_on) {
+      return false;
+    }
+  }
+
+  // if decide-before is specified, filter ADRs that have a later decide-by
+  if (options.decideBefore){
+    
+    // status must be "open"
+    if (frontmatter.status != "open"){
+      return false;
+    }
+
+    const decide_by = Date.parse(frontmatter["decide-by"])
+    if (isNaN(decide_by) || options.decideBefore < decide_by) {
+      return false;
+    }
+  }
   // if tags are specified, look for a match among the list of tags
   if (options.tags) {
      for (const tag of options.tags) {
@@ -276,9 +305,12 @@ app.command("/decision", async ({ command, ack, respond }) => {
       });
 
     program.name("/decision").command("log")
-      .addOption(new Option("-s, --status <status...>","ADR Status").choices(["open","committed","deferred","obsolete"]))
-      .addOption(new Option("-i, --impact <impact...>","Impact").choices(["high","medium","low"]))
-      .option("-t, --tags <tag...>","Return ADRs that match one of the supplied tags")
+      .description("List ADRs that match all of the given (optional) filters.")
+      .addOption(new Option("-s, --status <status...>","Filter on ADR status.").choices(["open","committed","deferred","obsolete"]))
+      .addOption(new Option("-i, --impact <impact...>","Filter on ADR Impact.").choices(["high","medium","low"]))
+      .option("-ca, --committed-after <date>","Filter ADRs committed since the given date (yyyy-mm-dd format).",myParseDate)
+      .option("-db, --decide-before <date>","Filter open ADRs that must be decided on before the given date (yyyy-mm-dd format).",myParseDate)
+      .option("-t, --tags <tag...>","Filter on ADR tags.")
       .action(async (options,command) => {
         message.text = "Decision Log";
         let logTitle = "Committed Decisions";
