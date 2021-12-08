@@ -1,9 +1,9 @@
 import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
-
+import {Command, Option} from "commander"
 import bolt from "@slack/bolt";
+import {split} from "shlex"
 
 const  { App } = bolt;
-
 
 // Initializes app with your bot token and signing secret
 const app = new App({
@@ -12,14 +12,6 @@ const app = new App({
   socketMode:true, // enable the following to use socket mode
   appToken: process.env.SLACK_APP_TOKEN
 });
-
-// usage instructions
-const usage = `
-Valid commands are: **log | help | start**
-To list decisions: \`/decision log [open|committed]\`
-To start a new decision: \`decision start <decision title>\`
-To get help: \`decision help [command]\`
-`
 
 /*
  * returns an array of block elements representing a decision log entry
@@ -213,24 +205,56 @@ app.action("list prs action", async({body, ack, client, action}) => {
   }
 });
 
+function checkFilter(frontmatter, options) {
+
+  // if no options passed, accept everything
+  if (Object.keys(options).length === 0) {return true;}
+
+  // if options are passed and there's no frontmatter, skip it
+  if (!frontmatter) {return false;}
+
+  // if status is specified look for a match
+  if (options.status && !options.status.includes(frontmatter.status)) {
+    return false;
+  }
+
+  // if impact is specified look for a match
+  if (options.impact && !options.impact.includes(frontmatter.impact)) {
+    return false;
+  }
+
+  // if tags are specified, look for a match among the list of tags
+  if (options.tags) {
+     for (const tag of options.tags) {
+       if (frontmatter.tags.includes(tag)) {
+         return true;
+       }
+     }
+     return false;
+  }
+
+  return true;
+
+}
+
 app.command("/decision", async ({ command, ack, say }) => {
   try {
     await ack();
-    const resp = command.text.split(' ');
 
-    // Slack suggests use of a "text" element in case the message will
-    // be printed to a system dialogue, or anywhere that block elements are
-    // not supported
     let message = { blocks: [], text: "" };
-    switch(resp[0]) {
 
-      case "log": {
+    const program = new Command();
+
+    program.command("log")
+      .addOption(new Option("-s, --status <status...>","ADR Status").choices(["open","committed","deferred","obsolete"]))
+      .addOption(new Option("-i, --impact <impact...>","Impact").choices(["high","medium","low"]))
+      .option("-t, --tags <tag...>","Return ADRs that match one of the supplied tags")
+      .action(async (options,command) => {
         message.text = "Decision Log";
         let logTitle = "Committed Decisions";
-        if (resp[1] === "open") {
+        if (options.status == "open") {
           logTitle = "Open Decisions";
         }
-
         // push a header block for the log
         message.blocks.push({
           type: "header",
@@ -240,23 +264,30 @@ app.command("/decision", async ({ command, ack, say }) => {
           },
         });
 
-        const adrFiles = await getAdrFiles();
+        const adrFiles = await getAdrFiles(options);
 
         for (const adrFile of adrFiles) {
 
-          // convert adr file to Slack block format and push it to the message body
-        
-          const blocks = toBlockFormat(adrFile);
+          if (checkFilter(adrFile.data.frontmatter,options)) {
+            // convert adr file to Slack block format and push it to the message body
+          
+            const blocks = toBlockFormat(adrFile);
 
-          blocks.forEach(block => {
-            message.blocks.push(block);
-          });
+            blocks.forEach(block => {
+              message.blocks.push(block);
+            });
+
+          }
             
         }
+      });
 
-        break;
-      }
+      // kludge - commander expects a process.argv type string array
+      const argv = "slack decision " + command.text;
+      await program.parseAsync(split(argv));
 
+
+/*
       case "start": {
         message.text = "Creating a new in-progress decision.";
         break;
@@ -273,7 +304,7 @@ app.command("/decision", async ({ command, ack, say }) => {
         });
       }
     }
-
+*/
     // write the message to Slack
     say(message);
   } catch (error) {
