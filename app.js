@@ -96,9 +96,10 @@ function toBlockFormat(adrFile) {
     // create reader friendly versions of the frontmatter properties
     const labels = {
       status: "Status",
-      committed: "Committed On",
+      "committed-on": "Committed On",
       "decide-by": "Decide By",
-      "review-by": "Review By"
+      "review-by": "Review By",
+      impact: "Impact",
     };
     
     const elements = [];
@@ -109,7 +110,7 @@ function toBlockFormat(adrFile) {
         elements.push(
           {
             type: "mrkdwn",
-            text: `*${labels[property]}*: ${adrJsonObj.frontmatter[property]}`,            
+            text: `\`${labels[property]}: ${adrJsonObj.frontmatter[property]}\``,            
           }
         );
       }
@@ -180,6 +181,7 @@ app.action("list prs action", async({body, ack, client, action}) => {
           text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
         }
       });
+      
       // keep this in for now, will add real data later
       modal.view.blocks.push({
         type: "context",
@@ -269,6 +271,8 @@ function checkFilter(frontmatter, options) {
 
 }
 
+
+
 app.command("/decision", async ({ command, ack, respond }) => {
   try {
     await ack();
@@ -321,19 +325,7 @@ app.command("/decision", async ({ command, ack, respond }) => {
       .option("-t, --tags <tag...>","Filter on ADR tags.")
       .action(async (options,command) => {
         message.text = "Decision Log";
-        let logTitle = "Committed Decisions";
-        if (options.status == "open") {
-          logTitle = "Open Decisions";
-        }
-        // push a header block for the log
-        message.blocks.push({
-          type: "header",
-          text: {
-            type: "plain_text",
-            text: logTitle,
-          },
-        });
-
+        
         const adrFiles = await getAdrFiles(options);
 
         for (const adrFile of adrFiles) {
