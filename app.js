@@ -269,6 +269,8 @@ function checkFilter(frontmatter, options) {
 
 }
 
+
+
 app.command("/decision", async ({ command, ack, respond }) => {
   try {
     await ack();
@@ -321,19 +323,7 @@ app.command("/decision", async ({ command, ack, respond }) => {
       .option("-t, --tags <tag...>","Filter on ADR tags.")
       .action(async (options,command) => {
         message.text = "Decision Log";
-        let logTitle = "Committed Decisions";
-        if (options.status == "open") {
-          logTitle = "Open Decisions";
-        }
-        // push a header block for the log
-        message.blocks.push({
-          type: "header",
-          text: {
-            type: "plain_text",
-            text: logTitle,
-          },
-        });
-
+        
         const adrFiles = await getAdrFiles(options);
 
         for (const adrFile of adrFiles) {
