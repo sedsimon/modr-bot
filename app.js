@@ -346,24 +346,6 @@ app.command("/decision", async ({ command, ack, respond }) => {
 
       await program.parseAsync(split(command.text),{from: "user"});
 
-/*
-      case "start": {
-        message.text = "Creating a new in-progress decision.";
-        break;
-      }
-
-      default: {
-        message.text = "Help Text";
-        message.blocks.push( {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: usage,
-          }
-        });
-      }
-    }
-*/
     // write the message to Slack
     respond(message);
   } catch (error) {
