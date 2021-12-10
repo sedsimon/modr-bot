@@ -2,6 +2,7 @@ import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
 import {Command, InvalidArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
 import {split} from "shlex"
+import moment from "moment"
 
 const  { App } = bolt;
 
@@ -157,46 +158,63 @@ app.action("list prs action", async({body, ack, client, action}) => {
           type: "plain_text",
           text: "Close"
         },
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: fileName
-            }
-          },
-          {
-            type: "divider"
-          },
-        ]
       },
     };
 
-    // loop through pull requests and add a row in the modal for each
-    for (const pullRequest of pullRequestsForFile) {
-      modal.view.blocks.push({
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
-        }
-      });
-      
-      // keep this in for now, will add real data later
-      modal.view.blocks.push({
-        type: "context",
-        elements: [
-          {
-            type: "mrkdwn",
-            text: "Status: *OPEN*"
-          },
-          {
-            type: "mrkdwn",
-            text: "Created: 2021-11-01"
+    if (!pullRequestsForFile) {
+      // if this file has no associated pull requests, inform the user
+      // and return
+      modal.view.blocks = [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: `${fileName} has no associated pull requests.`
           }
-        ]
-      });
-    }
+        },
+      ];
+    } else {
+      
+      modal.view.blocks = [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: fileName
+          }
+        },
+        {
+          type: "divider"
+        },
+      ];
+
+      // loop through pull requests and add a row in the modal for each
+      for (const pullRequest of pullRequestsForFile) {
+        modal.view.blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
+          }
+        });
+        
+        // keep this in for now, will add real data later
+        modal.view.blocks.push({
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Status: *${pullRequest.state}*`
+            },
+            {
+              type: "mrkdwn",
+              text: `Created: ${moment(Date.parse(pullRequest.createdAt)).format("YYYY-MM-DD")}`
+            }
+          ]
+        });
+      }
+  
+    } 
 
     // open the modal
     const result = await client.views.open(modal);
@@ -218,60 +236,10 @@ function myParseDate(datestr) {
   return date_ms;
 }
 
-function checkFilter(frontmatter, options) {
-
-  // if no options passed, accept everything
-  if (Object.keys(options).length === 0) {return true;}
-
-  // if options are passed and there's no frontmatter, skip it
-  if (!frontmatter) {return false;}
-
-  // if status is specified look for a match
-  if (options.status && !options.status.includes(frontmatter.status)) {
-    return false;
-  }
-
-  // if impact is specified look for a match
-  if (options.impact && !options.impact.includes(frontmatter.impact)) {
-    return false;
-  }
-
-  // if committed-after is specified, filter ADRs that have an earlier committed-on
-  if (options.committedAfter){
-    const committed_on = Date.parse(frontmatter["committed-on"])
-    if (isNaN(committed_on) || options.committedAfter > committed_on) {
-      return false;
-    }
-  }
-
-  // if decide-before is specified, filter ADRs that have a later decide-by
-  if (options.decideBefore){
-    
-    // status must be "open"
-    if (frontmatter.status != "open"){
-      return false;
-    }
-
-    const decide_by = Date.parse(frontmatter["decide-by"])
-    if (isNaN(decide_by) || options.decideBefore < decide_by) {
-      return false;
-    }
-  }
-  // if tags are specified, look for a match among the list of tags
-  if (options.tags) {
-     for (const tag of options.tags) {
-       if (frontmatter.tags.includes(tag)) {
-         return true;
-       }
-     }
-     return false;
-  }
-
-  return true;
-
-}
-
-
+/*
+ * respond to the "/decision" slash command
+ * push back info on all adrFiles that match the given set of options
+ */
 
 app.command("/decision", async ({ command, ack, respond }) => {
   try {
@@ -330,40 +298,17 @@ app.command("/decision", async ({ command, ack, respond }) => {
 
         for (const adrFile of adrFiles) {
 
-          if (checkFilter(adrFile.data.frontmatter,options)) {
-            // convert adr file to Slack block format and push it to the message body
-          
-            const blocks = toBlockFormat(adrFile);
+          // convert adr file to Slack block format and push it to the message body
+          const blocks = toBlockFormat(adrFile);
 
-            blocks.forEach(block => {
-              message.blocks.push(block);
-            });
-
-          }
-            
+          blocks.forEach(block => {
+            message.blocks.push(block);
+          });  
         }
       });      
 
       await program.parseAsync(split(command.text),{from: "user"});
 
-/*
-      case "start": {
-        message.text = "Creating a new in-progress decision.";
-        break;
-      }
-
-      default: {
-        message.text = "Help Text";
-        message.blocks.push( {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: usage,
-          }
-        });
-      }
-    }
-*/
     // write the message to Slack
     respond(message);
   } catch (error) {
