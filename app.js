@@ -218,7 +218,10 @@ function myParseDate(datestr) {
   return date_ms;
 }
 
-
+/*
+ * respond to the "/decision" slash command
+ * push back info on all adrFiles that match the given set of options
+ */
 
 app.command("/decision", async ({ command, ack, respond }) => {
   try {
