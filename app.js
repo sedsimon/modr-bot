@@ -157,46 +157,63 @@ app.action("list prs action", async({body, ack, client, action}) => {
           type: "plain_text",
           text: "Close"
         },
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: fileName
-            }
-          },
-          {
-            type: "divider"
-          },
-        ]
       },
     };
 
-    // loop through pull requests and add a row in the modal for each
-    for (const pullRequest of pullRequestsForFile) {
-      modal.view.blocks.push({
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
-        }
-      });
-      
-      // keep this in for now, will add real data later
-      modal.view.blocks.push({
-        type: "context",
-        elements: [
-          {
-            type: "mrkdwn",
-            text: "Status: *OPEN*"
-          },
-          {
-            type: "mrkdwn",
-            text: "Created: 2021-11-01"
+    if (!pullRequestsForFile) {
+      // if this file has no associated pull requests, inform the user
+      // and return
+      modal.view.blocks = [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: `${fileName} has no associated pull requests.`
           }
-        ]
-      });
-    }
+        },
+      ];
+    } else {
+      
+      modal.view.blocks = [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: fileName
+          }
+        },
+        {
+          type: "divider"
+        },
+      ];
+
+      // loop through pull requests and add a row in the modal for each
+      for (const pullRequest of pullRequestsForFile) {
+        modal.view.blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `<${pullRequest.url}|${pullRequest.title}>\n${pullRequest.body}`
+          }
+        });
+        
+        // keep this in for now, will add real data later
+        modal.view.blocks.push({
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: "Status: *OPEN*"
+            },
+            {
+              type: "mrkdwn",
+              text: "Created: 2021-11-01"
+            }
+          ]
+        });
+      }
+  
+    } 
 
     // open the modal
     const result = await client.views.open(modal);
