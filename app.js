@@ -2,6 +2,7 @@ import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
 import {Command, InvalidArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
 import {split} from "shlex"
+import moment from "moment"
 
 const  { App } = bolt;
 
@@ -203,11 +204,11 @@ app.action("list prs action", async({body, ack, client, action}) => {
           elements: [
             {
               type: "mrkdwn",
-              text: "Status: *OPEN*"
+              text: `Status: *${pullRequest.state}*`
             },
             {
               type: "mrkdwn",
-              text: "Created: 2021-11-01"
+              text: `Created: ${moment(Date.parse(pullRequest.createdAt)).format("YYYY-MM-DD")}`
             }
           ]
         });
