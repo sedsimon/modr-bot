@@ -218,59 +218,6 @@ function myParseDate(datestr) {
   return date_ms;
 }
 
-function checkFilter(frontmatter, options) {
-
-  // if no options passed, accept everything
-  if (Object.keys(options).length === 0) {return true;}
-
-  // if options are passed and there's no frontmatter, skip it
-  if (!frontmatter) {return false;}
-
-  // if status is specified look for a match
-  if (options.status && !options.status.includes(frontmatter.status)) {
-    return false;
-  }
-
-  // if impact is specified look for a match
-  if (options.impact && !options.impact.includes(frontmatter.impact)) {
-    return false;
-  }
-
-  // if committed-after is specified, filter ADRs that have an earlier committed-on
-  if (options.committedAfter){
-    const committed_on = Date.parse(frontmatter["committed-on"])
-    if (isNaN(committed_on) || options.committedAfter > committed_on) {
-      return false;
-    }
-  }
-
-  // if decide-before is specified, filter ADRs that have a later decide-by
-  if (options.decideBefore){
-    
-    // status must be "open"
-    if (frontmatter.status != "open"){
-      return false;
-    }
-
-    const decide_by = Date.parse(frontmatter["decide-by"])
-    if (isNaN(decide_by) || options.decideBefore < decide_by) {
-      return false;
-    }
-  }
-  // if tags are specified, look for a match among the list of tags
-  if (options.tags) {
-     for (const tag of options.tags) {
-       if (frontmatter.tags.includes(tag)) {
-         return true;
-       }
-     }
-     return false;
-  }
-
-  return true;
-
-}
-
 
 
 app.command("/decision", async ({ command, ack, respond }) => {
@@ -330,17 +277,12 @@ app.command("/decision", async ({ command, ack, respond }) => {
 
         for (const adrFile of adrFiles) {
 
-          if (checkFilter(adrFile.data.frontmatter,options)) {
-            // convert adr file to Slack block format and push it to the message body
-          
-            const blocks = toBlockFormat(adrFile);
+          // convert adr file to Slack block format and push it to the message body
+          const blocks = toBlockFormat(adrFile);
 
-            blocks.forEach(block => {
-              message.blocks.push(block);
-            });
-
-          }
-            
+          blocks.forEach(block => {
+            message.blocks.push(block);
+          });  
         }
       });      
 
