@@ -1,11 +1,12 @@
 ---
 impact: medium
 reversibility: high
-status: open
+status: committed
 tags: 
   - product
 review-by: "2022-01-01"
-decide-by: "2022-12-16"
+decide-by: "2021-12-16"
+committed-on: "2021-12-16"
 ---
 # Should we add Create New ADR to the OSS release?
 
