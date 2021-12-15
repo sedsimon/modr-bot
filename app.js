@@ -1,7 +1,7 @@
-import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
+import {getAdrFiles,getPullRequestsByFile, createAdrFile} from './lib/adrs.js'
 import {Command, InvalidArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
-import {split} from "shlex"
+import shlex from "shlex"
 import moment from "moment"
 
 const  { App } = bolt;
@@ -127,6 +127,14 @@ function myParseDate(datestr) {
 }
 
 /*
+ * fix slack strings. Slack sends lots of pretty characters that confuse the command parser
+ */
+
+function fixSlackStrings(str) {
+  return str.replace(/[\u201C\u201D]/g,'"');
+}
+
+/*
  * respond to the "/decision" slash command
  * push back info on all adrFiles that match the given set of options
  */
@@ -174,7 +182,9 @@ app.command("/decision", async ({ command, ack, respond }) => {
         
       });
 
-    program.name("/decision").command("log")
+    const decisionCommand = program.name("/decision").description("A utility for working with ADRs.");
+    
+    decisionCommand.command("log")
       .description("List ADRs that match all of the given (optional) filters.")
       .addOption(new Option("-s, --status <status...>","Filter on ADR status.").choices(["open","committed","deferred","obsolete"]))
       .addOption(new Option("-i, --impact <impact...>","Filter on ADR Impact.").choices(["high","medium","low"]))
@@ -197,9 +207,26 @@ app.command("/decision", async ({ command, ack, respond }) => {
             message.blocks.push(block);
           });  
         }
-      });      
+      });
 
-      await program.parseAsync(split(command.text),{from: "user"});
+    decisionCommand.command("add").description("Create a new ADR.")
+      .option("-i, --impact <impact>","Set impact=<impact> in new ADR.")
+      .requiredOption("-t, --title <title>","Set the title of the new ADR.")
+      .requiredOption("-b, --branch <branch>","Set the name of the new branch. This will also be used as the name of the associated pull request.")
+      .action(async (options,command) => {
+        const result = await createAdrFile(options);
+        message.text = "Create ADR";
+        message.blocks.push( {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "```" + result + "```",
+          }
+        });
+      });
+
+    const argv = shlex.split(fixSlackStrings(command.text));
+    await decisionCommand.parseAsync(argv,{from: "user"});
 
     // write the message to Slack
     respond(message);
