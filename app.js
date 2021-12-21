@@ -191,7 +191,7 @@ app.command("/decision", async ({ command, ack, respond }) => {
       .option("-ca, --committed-after <date>","Filter ADRs committed since the given date (yyyy-mm-dd format).",myParseDate)
       .option("-db, --decide-before <date>","Filter open ADRs that must be decided on before the given date (yyyy-mm-dd format).",myParseDate)
       .option("-t, --tags <tag...>","Filter on ADR tags.")
-      .action(async (options,command) => {
+      .action(async (options,cmd) => {
         message.text = "Decision Log";
         
         const adrFiles = await getAdrFiles(options);
@@ -214,20 +214,17 @@ app.command("/decision", async ({ command, ack, respond }) => {
       .option("-i, --impact <impact>","Set impact=<impact> in new ADR.","high")
       .option("-t, --title <title>","Set the title of the new ADR.","My new ADR title")
       .option("-b, --branch <branch>","Set the name of the new branch. This will also be used as the name of the associated pull request.","testing-branch")
-      .action(async (options,command) => {
+      .action(async (options,cmd) => {
         const result = await createAdrFile(options);
         const rootUrl = `https://github.com/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}`;
-        const branchUrl = `${rootUrl}/tree/${options.branch}`;
         const adrUrl = `${rootUrl}/tree/${options.branch}/${result.adrFile}`;
         message.text = "Create ADR";
+        message.response_type = "in_channel";
         message.blocks.push( {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `**Created a new ADR**
-            - File: <${adrUrl}|${result.adrFile}>
-            - Branch: <${branchUrl}|${options.branch}>
-            - Pull Request: <${result.pullRequestUrl}|${options.title.substring(0,50)}>`,
+            text: `<@${command.user_id}> created a new decision titled <${adrUrl}|${options.title}>.\nJoin the discussion on <${result.pullRequestUrl}|GitHub>`,
           }
         });
       });
