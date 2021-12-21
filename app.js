@@ -211,17 +211,23 @@ app.command("/decision", async ({ command, ack, respond }) => {
 
     // make title and branch optional for now to aid debugging
     decisionCommand.command("add").description("Create a new ADR.")
-      .option("-i, --impact <impact>","Set impact=<impact> in new ADR.")
-      .option("-t, --title <title>","Set the title of the new ADR.")
-      .option("-b, --branch <branch>","Set the name of the new branch. This will also be used as the name of the associated pull request.")
+      .option("-i, --impact <impact>","Set impact=<impact> in new ADR.","high")
+      .option("-t, --title <title>","Set the title of the new ADR.","My new ADR title")
+      .option("-b, --branch <branch>","Set the name of the new branch. This will also be used as the name of the associated pull request.","testing-branch")
       .action(async (options,command) => {
         const result = await createAdrFile(options);
+        const rootUrl = `https://github.com/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}`;
+        const branchUrl = `${rootUrl}/tree/${options.branch}`;
+        const adrUrl = `${rootUrl}/tree/${options.branch}/${result.adrFile}`;
         message.text = "Create ADR";
         message.blocks.push( {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: "```" + result + "```",
+            text: `**Created a new ADR**
+            - File: <${adrUrl}|${result.adrFile}>
+            - Branch: <${branchUrl}|${options.branch}>
+            - Pull Request: <${result.pullRequestUrl}|${options.title.substring(0,50)}>`,
           }
         });
       });
