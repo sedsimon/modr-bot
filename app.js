@@ -1,5 +1,5 @@
 import {getAdrFiles,getPullRequestsByFile, createAdrFile} from './lib/adrs.js'
-import {Command, InvalidArgumentError, Option} from "commander"
+import {Command, InvalidArgumentError, InvalidOptionArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
 import shlex from "shlex"
 import moment from "moment"
@@ -116,6 +116,18 @@ app.action("list prs action", async({body, ack, client, action}) => {
 });
 
 /*
+ * check that the given branch name is valid
+ * we assume <= 50 characters and only alnum or hyphens
+ */
+
+function parseBranch(branch) {
+  if (! /^[a-zA-Z][a-zA-Z0-9\-]{0,49}$/g.test(branch)) {
+    throw new InvalidOptionArgumentError("Error: branch name is invalid format.");
+  }
+  return branch;
+}
+
+/*
  * look for a date of format yyyy-mm-dd and throw InvalidArgumetnError if none found
  */
 function myParseDate(datestr) {
@@ -210,10 +222,10 @@ app.command("/decision", async ({ command, ack, respond }) => {
       });
 
     // make title and branch optional for now to aid debugging
-    decisionCommand.command("add").description("Create a new ADR.")
-      .option("-i, --impact <impact>","Set impact=<impact> in new ADR.","high")
-      .option("-t, --title <title>","Set the title of the new ADR.","My new ADR title")
-      .option("-b, --branch <branch>","Set the name of the new branch. This will also be used as the name of the associated pull request.","testing-branch")
+    decisionCommand.command("add").description("Create a new ADR including associated branch and pull request.")
+      .addOption(new Option("-i, --impact <impact>","Set impact=<impact> in new ADR.").default("medium").choices(["high","medium","low"]))
+      .requiredOption("-t, --title <title>","Set the title of the new ADR. This will also be used as the name of the associated pull request.",)
+      .requiredOption("-b, --branch <branch>","Set the name of the new branch.",parseBranch)
       .action(async (options,cmd) => {
         const result = await createAdrFile(options);
         const rootUrl = `https://github.com/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}`;
