@@ -18,7 +18,9 @@
     "octokit": "^1.7.1",
     "remark-frontmatter": "^4.0.1",
     "remark-parse": "^10.0.1",
+    "remark-stringify": "^10.0.2",
     "shlex": "^2.1.0",
+    "unist-util-visit": "^4.1.0",
     "yaml": "^1.10.2"
   },
   "devDependencies": {

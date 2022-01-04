@@ -1,7 +1,7 @@
-import {getAdrFiles,getPullRequestsByFile} from './lib/adrs.js'
-import {Command, InvalidArgumentError, Option} from "commander"
+import {getAdrFiles,getPullRequestsByFile, createAdrFile} from './lib/adrs.js'
+import {Command, InvalidArgumentError, InvalidOptionArgumentError, Option} from "commander"
 import bolt from "@slack/bolt";
-import {split} from "shlex"
+import shlex from "shlex"
 import moment from "moment"
 
 const  { App } = bolt;
@@ -116,6 +116,18 @@ app.action("list prs action", async({body, ack, client, action}) => {
 });
 
 /*
+ * check that the given branch name is valid
+ * we assume <= 50 characters and only alnum or hyphens
+ */
+
+function parseBranch(branch) {
+  if (! /^[a-zA-Z][a-zA-Z0-9\-]{0,49}$/g.test(branch)) {
+    throw new InvalidOptionArgumentError("Error: branch name is invalid format.");
+  }
+  return branch;
+}
+
+/*
  * look for a date of format yyyy-mm-dd and throw InvalidArgumetnError if none found
  */
 function myParseDate(datestr) {
@@ -124,6 +136,14 @@ function myParseDate(datestr) {
     throw new InvalidArgumentError("Error: unable to parse date " + datestr + ". Must be yyyy-mm-dd format.");
   }
   return date_ms;
+}
+
+/*
+ * fix slack strings. Slack sends lots of pretty characters that confuse the command parser
+ */
+
+function fixSlackStrings(str) {
+  return str.replace(/[\u201C\u201D]/g,'"');
 }
 
 /*
@@ -174,14 +194,16 @@ app.command("/decision", async ({ command, ack, respond }) => {
         
       });
 
-    program.name("/decision").command("log")
+    const decisionCommand = program.name("/decision").description("A utility for working with ADRs.");
+    
+    decisionCommand.command("log")
       .description("List ADRs that match all of the given (optional) filters.")
       .addOption(new Option("-s, --status <status...>","Filter on ADR status.").choices(["open","committed","deferred","obsolete"]))
       .addOption(new Option("-i, --impact <impact...>","Filter on ADR Impact.").choices(["high","medium","low"]))
       .option("-ca, --committed-after <date>","Filter ADRs committed since the given date (yyyy-mm-dd format).",myParseDate)
       .option("-db, --decide-before <date>","Filter open ADRs that must be decided on before the given date (yyyy-mm-dd format).",myParseDate)
       .option("-t, --tags <tag...>","Filter on ADR tags.")
-      .action(async (options,command) => {
+      .action(async (options,cmd) => {
         message.text = "Decision Log";
         
         const adrFiles = await getAdrFiles(options);
@@ -197,9 +219,30 @@ app.command("/decision", async ({ command, ack, respond }) => {
             message.blocks.push(block);
           });  
         }
-      });      
+      });
 
-      await program.parseAsync(split(command.text),{from: "user"});
+    // make title and branch optional for now to aid debugging
+    decisionCommand.command("add").description("Create a new ADR including associated branch and pull request.")
+      .addOption(new Option("-i, --impact <impact>","Set impact=<impact> in new ADR.").default("medium").choices(["high","medium","low"]))
+      .requiredOption("-t, --title <title>","Set the title of the new ADR. This will also be used as the name of the associated pull request.",)
+      .requiredOption("-b, --branch <branch>","Set the name of the new branch.",parseBranch)
+      .action(async (options,cmd) => {
+        const result = await createAdrFile(options);
+        const rootUrl = `https://github.com/${process.env.GITHUB_USER}/${process.env.GITHUB_REPO}`;
+        const adrUrl = `${rootUrl}/tree/${options.branch}/${result.adrFile}`;
+        message.text = "Create ADR";
+        message.response_type = "in_channel";
+        message.blocks.push( {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `<@${command.user_id}> created a new decision titled <${adrUrl}|${options.title}>.\nJoin the discussion on <${result.pullRequestUrl}|GitHub>`,
+          }
+        });
+      });
+
+    const argv = shlex.split(fixSlackStrings(command.text));
+    await decisionCommand.parseAsync(argv,{from: "user"});
 
     // write the message to Slack
     respond(message);
