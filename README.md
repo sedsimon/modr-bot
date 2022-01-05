@@ -4,15 +4,30 @@ Slack bot to simplify creation and retrieval of Architectural Decision Records (
 `modr` stands for Markdown Organizational Decision Record - a riff on Architectural Decision Record which hints that, just maybe, we should be making a record of all decisions, not just architecture ones.
 
 ## introduction
-- why modr-bot was created
-- who is it for
-- what IRL practices will help you get the most out of modr-bot
+The ultimate aim of the project which created `modr-bot` is to help improve outcomes through quality decision making. One of the simplest and highest leverage steps you can take to improve the quality of your decisions is to *write them down*.
+
+### Why write down decisions
+Improving quality of decisions requires relfecting on past decisions to look for opportunities to do better in the future. If you fail to record your decision at the time it was made, along with the relevant *context*, you risk forgetting an important factor that influenced your decision. It's also likely you will fall prey to *hindsight bias* - basically, explaining away poor outcomes as bad luck, and taking credit for good outcomes where no credit is actually deserved. All of this degrades your ability to *learn* from past decisions and will prevent the improvement of decision quality over time.
+
+The act of writing down your decision forces the author(s) to deeply understand the decision so they can put into words the problem, chosen path and context. The process of writing your decision down often uncovers hidden ambiguities or further questions that should be resolved before committing to the decision. As a result, the quality of the decision improves.
+
+Finally, writing down a decision creates a single record that can be used as a collaboration point for a team, where all questions, comments and changes to the decision can be recorded. This improves decision quality by ensuring no information is lost (across multiple documents for example, or in unrecorded meeting conversations) and greatly improves context for future readers.
+
+### Getting the most out of modr-bot
+Out of the box, you can use `modr-bot` to pull information about ADRs from your GitHub repo or to create new ADRs using Slack. To get the most out of `modr-bot`, here are some tips:
+
+- make a new ADR at the beginning of the decision making process, not at the end. The template can remind you of the important things you need to consider when making the decision (for example, the default template asks about the problem, the alternatives considered, the trade offs etc). Also, having an ADR skeleton at the beginning of the process creates a space for the team to collaborate
+- use the YAML Frontmatter to record metadata about your decision.
+    * think about the *impact and reversibility*. These will guide you on how much time to spend on the decision. A decision that is either highly reversible or low impact can be made quickly. A high impact and irreversible decision should be considered carefully.
+    * merge the skeleton decision as soon as it's created. With a status attribute of `open` and a `decide-by` attribute set, it signals to the team that you are not committed to the decision yet. This also allows `modr-bot` to answer questions like "What big decisions are the team facing in the next two weeks".
+
 
 ## How to install it
 To use modr-bot a few assumptions are made:
 - you have `node` and `yarn` installed
 - you have a Slack workspace and can install apps to it
 - you have a GitHub repo that you use to store ADRs
+- for each decision your team makes, you start by creating a branch, a new blank ADR, and a pull request. You use this pull request to collaborate and you update the ADR through commits to the branch. When the decision is committed, you merge the PR.
 
 Given the above, follow these steps to get set up.
 ### Create a Slack App
@@ -88,3 +103,4 @@ The ADR files and associated YAML frontmatter created with `modr-bot` can be see
 
 ## what's next
 - production readiness (ie: docker)
+- performance
