@@ -151,7 +151,7 @@ function fixSlackStrings(str) {
  * push back info on all adrFiles that match the given set of options
  */
 
-app.command("/decision", async ({ command, ack, respond }) => {
+app.command("/adr", async ({ command, ack, respond }) => {
   try {
     await ack();
 
@@ -194,7 +194,7 @@ app.command("/decision", async ({ command, ack, respond }) => {
         
       });
 
-    const decisionCommand = program.name("/decision").description("A utility for working with ADRs.");
+    const decisionCommand = program.name("/adr").description("A utility for working with ADRs.");
     
     decisionCommand.command("log")
       .description("List ADRs that match all of the given (optional) filters.")
