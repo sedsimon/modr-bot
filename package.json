@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "dev": "nodemon --inspect -r dotenv/config app.js"
   },
   "keywords": [],
@@ -24,7 +26,9 @@
     "yaml": "^1.10.2"
   },
   "devDependencies": {
+    "@jest/globals": "^30.0.4",
     "dotenv": "^10.0.0",
+    "jest": "^30.0.4",
     "nodemon": "^2.0.14"
   }
 }
