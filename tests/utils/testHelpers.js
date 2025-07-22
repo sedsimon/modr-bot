@@ -5,6 +5,7 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkFrontmatter from 'remark-frontmatter';
 import { jest } from '@jest/globals';
+import { TEST_CONFIG, getTestEnvironment, getGitHubTestConfig, getSlackTestConfig } from '../config/testConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,20 +96,7 @@ export function createMockOctokit(mockResponses = {}) {
  * @param {Object} overrides - Environment variable overrides
  */
 export function setupTestEnvironment(overrides = {}) {
-  const defaultEnv = {
-    NODE_ENV: 'test',
-    GITHUB_TOKEN: 'test-token',
-    GITHUB_USER: 'test-user',
-    GITHUB_REPO: 'test-repo',
-    GITHUB_DEFAULT_BRANCH: 'main',
-    GITHUB_PATH_TO_ADRS: 'docs/decisions',
-    GITHUB_ADR_REGEX: '\\d{4}-.*\\.md',
-    GITHUB_ADR_TEMPLATE: 'docs/decisions/decision-template.md',
-    ADR_PARSER: './adrParser.js',
-    ADR_TO_BLOCK_TRANSFORMER: './blockFormatter.js'
-  };
-
-  const testEnv = { ...defaultEnv, ...overrides };
+  const testEnv = getTestEnvironment(overrides);
   
   Object.keys(testEnv).forEach(key => {
     process.env[key] = testEnv[key];
@@ -137,9 +125,10 @@ export function cleanupTestEnvironment(originalEnv = {}) {
  * @returns {Object} Test ADR data
  */
 export function createTestADRData(overrides = {}) {
+  const githubConfig = getGitHubTestConfig();
   const defaultData = {
     name: '0001-test-decision.md',
-    githubUrl: 'https://github.com/test-user/test-repo/blob/main/docs/decisions/0001-test-decision.md',
+    githubUrl: `https://github.com/${githubConfig.defaultRepo.owner}/${githubConfig.defaultRepo.repo}/blob/${githubConfig.defaultRepo.defaultBranch}/docs/decisions/0001-test-decision.md`,
     data: {
       frontmatter: {
         impact: 'medium',
@@ -164,18 +153,19 @@ export function createTestADRData(overrides = {}) {
  * @returns {Object} Mock Slack command payload
  */
 export function createMockSlackCommand(overrides = {}) {
+  const slackConfig = getSlackTestConfig();
   const defaultCommand = {
-    token: 'test-token',
-    team_id: 'T1234567890',
+    token: 'test-slack-token',
+    team_id: slackConfig.teamId,
     team_domain: 'test-team',
-    channel_id: 'C1234567890',
+    channel_id: slackConfig.channelId,
     channel_name: 'general',
-    user_id: 'U1234567890',
+    user_id: slackConfig.userId,
     user_name: 'testuser',
     command: '/adr',
     text: 'log',
-    response_url: 'https://hooks.slack.com/commands/1234567890/test',
-    trigger_id: '1234567890.1234567890.test'
+    response_url: 'https://hooks.slack.com/commands/test',
+    trigger_id: 'test-trigger-id'
   };
 
   return { ...defaultCommand, ...overrides };

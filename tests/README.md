@@ -38,8 +38,10 @@ tests/
 
 ### Test Helpers (`tests/utils/testHelpers.js`)
 
+**Note**: All test helpers use centralized configuration from `testConfig.js` to ensure consistency.
+
 ```javascript
-import { loadFixture, loadADRFixture, createMockOctokit } from './utils/testHelpers.js';
+import { loadFixture, loadADRFixture, createMockOctokit, setupTestEnvironment, createTestADRData, createMockSlackCommand } from './utils/testHelpers.js';
 
 // Load any fixture file
 const content = await loadFixture('adrs/0001-test-adr-open.md');
@@ -52,6 +54,15 @@ const mockOctokit = createMockOctokit({
   graphql: mockGraphQLResponse,
   createRef: mockBranchResponse
 });
+
+// Set up test environment (uses centralized config)
+setupTestEnvironment({ GITHUB_USER: 'custom-user' });
+
+// Create test ADR data (uses centralized GitHub config)
+const adrData = createTestADRData({ name: 'custom-adr.md' });
+
+// Create mock Slack command (uses centralized Slack config)
+const slackCommand = createMockSlackCommand({ text: 'log --status open' });
 ```
 
 ### Mock Factory (`tests/utils/mockFactory.js`)
