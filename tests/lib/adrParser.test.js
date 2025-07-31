@@ -34,6 +34,8 @@ describe('adrParser', () => {
         impact: 'high',
         status: 'open'
       });
+      expect(result.title).toBe('Test Decision');
+      expect(result['Problem Description']).toBe('This is a test problem.');
     });
 
     test('should handle AST without YAML frontmatter', () => {
@@ -51,6 +53,7 @@ describe('adrParser', () => {
 
       expect(result).toBeDefined();
       expect(result.frontmatter).toBeUndefined();
+      expect(result.title).toBe('Test Decision');
     });
 
     test('should handle empty AST gracefully', () => {
@@ -58,9 +61,8 @@ describe('adrParser', () => {
         children: []
       };
 
-      // This test demonstrates that the current implementation has a bug
-      // It should handle empty children arrays gracefully
-      expect(() => adrToJSON(mockAST)).toThrow();
+      // This should handle empty children arrays gracefully without throwing
+      expect(() => adrToJSON(mockAST)).not.toThrow();
     });
   });
 });
