@@ -67,3 +67,4 @@ Use `.env` file for development (loaded by dotenv package).
 
 - Check Jira for any questions about tasks or epics with the prefix MODR
 - Make sure to keep CLAUDE.md up to date with any changes you make to the codebase
+- Use yarn instead of npm when possible
