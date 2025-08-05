@@ -6,24 +6,11 @@ $ARGUMENTS
 
 Follow these instructions carefully to complete your task:
 
-1. Check that the ticket is in the DEV PLAN COMPLETE column - this means the technical implementation plan has been completed.
+1. Set the ticket status to "IN PROGRESS"
 
-2. Set the ticket status to "IN PROGRESS"
+2. Create a feature branch off main for your work. Name the branch appropriately based on the issue.
 
-3. Create a feature branch off main for your work. Name the branch appropriately based on the issue.
-
-4. Review the ticket details and the technical plan listed in the ticket. Ensure you understand the feature requirements and the proposed technical implementation.
-
-5. Review the codebase you're working in. Make sure you have a good understanding of the current code structure and relevant components.
-
-6. Consider best practices for implementing this type of feature, including coding standards, performance considerations, and maintainability.
-
-7. Evaluate any technical implementation plan described in the ticket. It is very important that you follow the technical implementation plan as closely as possible. Do not allow the scope to creep beyond what the technical implementation plan describes. If you have any concerns or suggestions for improvement with the plan, note them down as comments in the ticket. Then pause and ask me what to do next.
-
-8. Once you are happy with the technical implementation plan, then implement the feature on your branch using small, easy-to-understand commits according to the details of the plan. Follow these steps:
-   a. Write the necessary code changes
-   b. Create test cases as necessary to maintain coverage and ensure the feature works as expected
-   c. Execute the test suite locally to ensure you have not caused a regression and that your new code works as expected
+3. Use the code-developer subagent to implement the feature according to the technical plan laid out in the JIRA ticket.
 
 9. When you're satisfied with your implementation, summarize your work and ask me to review it. Include:
    - A brief description of the changes made
