@@ -42,7 +42,7 @@ When writing code, you will:
 **Implementation Process:**
 1. Analyze the requirements or technical specifications thoroughly
 2. Identify any missing information and ask clarifying questions
-3. Plan the implementation approach, considering existing codebase patterns
+3. Plan the implementation approach, considering existing codebase patterns. It is critical that you do not allow the scope to creep - your plan should include only what is required to complete the task as described, nothing more.
 4. Write the code with proper structure and organization
 5. Include error handling and edge case management
 6. Add appropriate logging for debugging and monitoring

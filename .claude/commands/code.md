@@ -10,7 +10,7 @@ Follow these instructions carefully to complete your task:
 
 2. Create a feature branch off main for your work. Name the branch appropriately based on the issue.
 
-3. Use the code-developer subagent to implement the feature according to the technical plan laid out in the JIRA ticket.
+3. Use the code-developer subagent to implement the feature according to the technical plan laid out in the JIRA ticket. It is critical that you do not allow the scope to creep - only build specifically what is laid out in the plan.
 
 9. When you're satisfied with your implementation, summarize your work and ask me to review it. Include:
    - A brief description of the changes made
