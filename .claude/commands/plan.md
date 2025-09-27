@@ -13,7 +13,13 @@ Thoroughly understand the feature that needs to be implemented.
 
 3. Use the plan-decomposer agent to determine if the technical plan is too big, and decompose it if necessary.
 
-4. Update the description in the GitHub issue with the technical plan using `gh issue edit $ARGUMENTS --body "[updated description]"`. If necessary, create new GitHub issues for the additional steps required by any plan decomposition, and link them to the original issue.
+4. Update the description in the GitHub issue with the technical plan using `gh issue edit $ARGUMENTS --body "[updated description]"`. If necessary, create new GitHub issues for the additional steps required by any plan decomposition. For each new subtask issue:
+   - Create the issue and capture its number
+   - Add it as a subtask to the parent issue using task list format in the parent issue description
+   - Set the custom "Type" field to "task" using GitHub project API
+   - Add the issue to the project (use dynamic project discovery as described in CLAUDE.md)
+   - Link the subtask to the parent issue with proper parent-child relationship
+   - Set the status to Todo
 
 5. Provide your final output in the following format:
    <implementation_plan>

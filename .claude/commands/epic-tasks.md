@@ -39,6 +39,7 @@ When you go to create the subtask issues:
 3. **Set Type field to Task**: Use GitHub API to find the "Type" field and set it to "Task" value for each subtask
 4. **Set Status to Todo**: Use GitHub API to find the "Status" field and set it to "Todo" value for each subtask
 5. **Update epic task list**: Update the epic issue description to include a task list with all subtasks: `- [ ] #[subtask-issue-number] Subtask title`
+6. **Create the parent/child relationship**: Set the epic as the new task's parent using GitHub's `addSubIssue` mutation
 
 ## Field Management Process
 - Use GraphQL API to discover field IDs and option IDs dynamically
