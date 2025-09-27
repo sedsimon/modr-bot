@@ -9,7 +9,7 @@ $ARGUMENTS
 Before proceeding, perform these validation steps:
 
 1. **Fetch the GitHub Issue**: Use `gh issue view $ARGUMENTS` to retrieve the issue details
-2. **Verify Epic Type**: Ensure the issue has the "epic" label - if not, stop and inform the user that the issue must be labeled as "epic"
+2. **Verify Epic Type**: Ensure the issue is properly set up as an epic in the GitHub Project (Type field = "Epic") - if not, stop and inform the user that the issue must have Type set to "Epic" in the project
 3. **Read Issue Content**: Carefully analyze the epic description and acceptance criteria
 
 Thoroughly review the codebase before proceeding.
@@ -34,8 +34,14 @@ Before finalizing your list, review each task to ensure it meets all the require
 Once you have finalized your list, review the list with me before proceeding to create the GitHub Issues.
 
 When you go to create the subtask issues:
-1. Create each subtask as a new GitHub issue using `gh issue create`
-2. Link each subtask to the parent epic using GitHub's subtask feature by adding the subtask to the epic's task list
-3. Update the epic issue description to include a task list with all subtasks: `- [ ] #[subtask-issue-number] Subtask title`
-4. Apply appropriate labels to each subtask (e.g., "task", "feature", "bug")
-5. Add subtasks to the same GitHub Project as the epic if applicable
+1. **Create each subtask** as a new GitHub issue using `gh issue create`
+2. **Add to GitHub Project**: Add each subtask to the same project as the epic using `gh project item-add`
+3. **Set Type field to Task**: Use GitHub API to find the "Type" field and set it to "Task" value for each subtask
+4. **Set Status to Todo**: Use GitHub API to find the "Status" field and set it to "Todo" value for each subtask
+5. **Update epic task list**: Update the epic issue description to include a task list with all subtasks: `- [ ] #[subtask-issue-number] Subtask title`
+
+## Field Management Process
+- Use GraphQL API to discover field IDs and option IDs dynamically
+- Look for field with name "Type" and find option with name "Task"
+- Look for field with name "Status" and find option with name "Todo"
+- Use `gh project item-edit` with the discovered IDs to set field values
