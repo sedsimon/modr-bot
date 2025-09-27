@@ -63,6 +63,16 @@ Use `.env` file for development (loaded by dotenv package).
 - **Slack responses**: Uses Block Kit format for rich messaging
 - **Command parsing**: Commander.js processes slash command arguments with custom validation
 
+## GitHub Project Discovery
+
+For GitHub Issues and Projects workflow, use dynamic project discovery:
+
+1. **Primary**: Look for project matching repo name: `gh project list --owner <owner> --format json | jq '.projects[] | select(.title == "<repo-name>")'`
+2. **Fallback**: If not found or multiple matches, ask user which project to use
+3. **Note**: Projects v2 are workspace-level, not repo-associated, so `gh repo view --json projects` returns empty
+
+This approach replaces hardcoded project IDs since Projects v2 are not directly linked to repositories.
+
 ## Custom Commands and Agents
 
 This project includes custom Claude Code commands and agents for GitHub Issues and Projects workflow:
