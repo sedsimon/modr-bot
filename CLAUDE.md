@@ -63,8 +63,38 @@ Use `.env` file for development (loaded by dotenv package).
 - **Slack responses**: Uses Block Kit format for rich messaging
 - **Command parsing**: Commander.js processes slash command arguments with custom validation
 
+## Custom Commands and Agents
+
+This project includes custom Claude Code commands and agents for GitHub Issues and Projects workflow:
+
+### Commands
+
+- **epic-tasks**: Takes a GitHub issue number (must be labeled as "epic") and breaks it down into subtasks
+  - Usage: `/epic-tasks <issue-number>`
+  - Validates the issue has "epic" label
+  - Creates subtasks as GitHub issues linked to the parent epic via task lists
+
+- **code**: Implements a GitHub issue with code development
+  - Usage: `/code <issue-number>`
+  - Creates feature branch, implements code, and creates PR
+  - Links PR to close the issue automatically
+
+- **plan**: Creates technical implementation plans for GitHub issues
+  - Usage: `/plan <issue-number>`
+  - Updates issue description with technical plan
+  - Uses technical-planner and plan-decomposer agents
+
+### Agents
+
+All agents work with GitHub Issues and Projects:
+- **technical-planner**: Creates comprehensive technical implementation plans
+- **plan-decomposer**: Evaluates plans for complexity and breaks them down if needed
+- **code-developer**: Implements features from technical specifications
+- **code-qa-reviewer**: Performs quality assurance review of code changes
+- **pr-code-reviewer**: Conducts thorough code reviews of pull requests
+
 ## Workflow Reminders
 
-- Check Jira for any questions about tasks or epics with the prefix MODR
+- Check GitHub Issues and Projects for any questions about tasks or epics
 - Make sure to keep CLAUDE.md up to date with any changes you make to the codebase
 - Use yarn instead of npm when possible
