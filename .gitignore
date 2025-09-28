@@ -72,6 +72,12 @@ typings/
 .env
 .env.test
 
+# claude code environment variables file
+.env.claude
+
+# direnv config file
+.envrc
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 
