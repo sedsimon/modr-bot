@@ -63,7 +63,7 @@ Use `.env` file for development (loaded by dotenv package).
 - **Slack responses**: Uses Block Kit format for rich messaging
 - **Command parsing**: Commander.js processes slash command arguments with custom validation
 
-## GitHub Project Discovery
+## GitHub Project Discovery and Management
 
 For GitHub Issues and Projects workflow, use dynamic project discovery:
 
@@ -72,6 +72,59 @@ For GitHub Issues and Projects workflow, use dynamic project discovery:
 3. **Note**: Projects v2 are workspace-level, not repo-associated, so `gh repo view --json projects` returns empty
 
 This approach replaces hardcoded project IDs since Projects v2 are not directly linked to repositories.
+
+### GitHub Project Management Commands
+
+#### Project Information
+- **List projects**: `gh project list --owner <owner> --format json`
+- **View project details**: `gh project view <number> --owner <owner> --format json`
+- **List project items**: `gh project item-list <number> --owner <owner> --format json`
+
+#### Adding Issues to Projects
+- **Add issue to project**: `gh project item-add <project-number> --owner <owner> --url <issue-url>`
+
+#### Getting Project Field Information
+```bash
+# Get project fields and their options (for custom fields like Type, Status)
+gh api graphql -f query='query {
+  node(id: "PROJECT_ID") {
+    ... on ProjectV2 {
+      fields(first: 20) {
+        nodes {
+          __typename
+          ... on ProjectV2SingleSelectField {
+            id
+            name
+            options { id name }
+          }
+        }
+      }
+    }
+  }
+}'
+```
+
+#### Setting Project Field Values
+```bash
+# Set custom field values for project items
+gh project item-edit --project-id <PROJECT_ID> --id <ITEM_ID> --field-id <FIELD_ID> --single-select-option-id <OPTION_ID>
+```
+
+### modr-bot Project Field IDs
+- **Project ID**: `PVT_kwHOABCm3s4BEJmh`
+- **Type Field ID**: `PVTSSF_lAHOABCm3s4BEJmhzg13K1A`
+  - Epic: `6999a64a`
+  - Task: `45e7c4fa`
+- **Status Field ID**: `PVTSSF_lAHOABCm3s4BEJmhzg13GPA`
+  - Todo: `f75ad846`
+  - In Progress: `47fc9ee4`
+  - In Review: `6217f801`
+  - Done: `98236657`
+
+### Issue Management
+- **Create sub-issue relationships**: Use GitHub's sub-issue API via the GitHub MCP tools
+- **Get issue details**: `mcp__github__get_issue` with owner, repo, issue_number
+- **Add sub-issues**: `mcp__github__add_sub_issue` with parent issue number and sub-issue ID
 
 ## Custom Commands and Agents
 
