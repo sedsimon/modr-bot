@@ -18,7 +18,7 @@ Thoroughly understand the feature that needs to be implemented.
    - Add it as a subtask to the parent issue using task list format in the parent issue description
    - Set the custom "Type" field to "task" using GitHub project API
    - Add the issue to the project (use dynamic project discovery as described in CLAUDE.md)
-   - Link the subtask to the parent issue with proper parent-child relationship
+   - Link the subtask to the parent issue using GitHub's `addSubIssue` mutation
    - Set the status to Todo
 
 5. Provide your final output in the following format:

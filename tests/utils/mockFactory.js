@@ -201,6 +201,93 @@ Some trade-offs for this decision.`;
   }
 
   /**
+   * Create a mock GitHub GraphQL response for getAdrFiles query
+   * @param {Array} customFiles - Custom ADR files to include in response
+   * @returns {Object} Mock GraphQL response matching getAdrFiles query structure
+   */
+  static createGetAdrFilesGraphQLResponse(customFiles = []) {
+    const defaultFiles = [
+      {
+        name: '0001-test-adr-open.md',
+        object: {
+          text: this.createADRContent('API Design Pattern for Data Access', 'open', {
+            impact: 'high',
+            reversibility: 'medium',
+            tags: ['architecture', 'api'],
+            'review-by': '2024-01-15',
+            'decide-by': '2024-02-01'
+          })
+        }
+      },
+      {
+        name: '0002-test-adr-committed.md',
+        object: {
+          text: this.createADRContent('Container Orchestration Platform', 'committed', {
+            impact: 'medium',
+            reversibility: 'low',
+            tags: ['infrastructure', 'deployment'],
+            'decide-by': '2023-12-01'
+          })
+        }
+      },
+      {
+        name: '0003-test-adr-deferred.md',
+        object: {
+          text: this.createADRContent('Real-time Performance Monitoring', 'deferred', {
+            impact: 'low',
+            reversibility: 'high',
+            tags: ['performance', 'monitoring'],
+            'review-by': '2024-06-01'
+          })
+        }
+      },
+      {
+        name: '0004-test-adr-obsolete.md',
+        object: {
+          text: this.createADRContent('Legacy System Migration', 'obsolete', {
+            impact: 'high',
+            reversibility: 'low',
+            tags: ['legacy', 'migration']
+          })
+        }
+      },
+      {
+        name: 'README.md',
+        object: {
+          text: '# ADRs\n\nThis directory contains architectural decision records.'
+        }
+      }
+    ];
+
+    const entries = customFiles.length > 0 ? customFiles : defaultFiles;
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create a mock ADR file entry for GraphQL response
+   * @param {string} name - File name
+   * @param {string} title - ADR title
+   * @param {string} status - ADR status
+   * @param {Object} frontmatterOverrides - Additional frontmatter fields
+   * @returns {Object} ADR file entry for GraphQL response
+   */
+  static createADRFileEntry(name, title, status = 'open', frontmatterOverrides = {}) {
+    return {
+      name,
+      object: {
+        text: this.createADRContent(title, status, frontmatterOverrides)
+      }
+    };
+  }
+
+  /**
    * Create a mock Octokit instance with predefined responses
    * @param {Object} responses - Object containing mock responses for different methods
    * @returns {Object} Mock Octokit instance
@@ -224,8 +311,8 @@ Some trade-offs for this decision.`;
           getRef: jest.fn().mockResolvedValue({ data: mockResponses.getRef })
         },
         repos: {
-          createOrUpdateFileContents: jest.fn().mockResolvedValue({ 
-            data: mockResponses.createOrUpdateFileContents 
+          createOrUpdateFileContents: jest.fn().mockResolvedValue({
+            data: mockResponses.createOrUpdateFileContents
           })
         },
         pulls: {
