@@ -1,5 +1,5 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { MockFactory } from '../utils/MockFactory.js';
+import { MockFactory } from '../utils/mockFactory.js';
 
 // Mock the Octokit constructor and methods
 const mockGraphql = jest.fn();
