@@ -1611,6 +1611,517 @@ Complex tag parsing may affect search and filtering functionality.`;
     return adrs;
   }
 
+  // ====================================================================
+  // ERROR RESPONSE METHODS FOR COMPREHENSIVE getAdrFiles() ERROR TESTING
+  // ====================================================================
+
+  /**
+   * Create a standard GraphQL error response structure
+   * @param {string} errorType - Type of GraphQL error (e.g., 'NOT_FOUND', 'FORBIDDEN')
+   * @param {string} message - Error message
+   * @param {Array} path - GraphQL path where error occurred
+   * @returns {Object} GraphQL error response structure
+   */
+  static createGraphQLErrorResponse(errorType, message, path = []) {
+    return {
+      errors: [
+        {
+          message,
+          type: errorType,
+          path,
+          locations: [{ line: 1, column: 1 }]
+        }
+      ]
+    };
+  }
+
+  /**
+   * Create repository not found error response
+   * @param {string} repoName - Repository name that was not found
+   * @returns {Object} GraphQL error response for repository not found
+   */
+  static createRepositoryNotFoundError(repoName = 'test-repo') {
+    return this.createGraphQLErrorResponse(
+      'NOT_FOUND',
+      `Could not resolve to a Repository with the name '${repoName}'.`,
+      ['repository']
+    );
+  }
+
+  /**
+   * Create authentication error response
+   * @returns {Object} GraphQL error response for authentication failure
+   */
+  static createAuthenticationError() {
+    return this.createGraphQLErrorResponse(
+      'FORBIDDEN',
+      'Resource not accessible by personal access token',
+      ['repository']
+    );
+  }
+
+  /**
+   * Create rate limit error response
+   * @param {number} resetTime - Unix timestamp when rate limit resets
+   * @returns {Object} GraphQL error response for rate limiting
+   */
+  static createRateLimitError(resetTime = Date.now() + 3600000) {
+    return this.createGraphQLErrorResponse(
+      'RATE_LIMITED',
+      `API rate limit exceeded. Rate limit will reset at ${new Date(resetTime).toISOString()}.`,
+      []
+    );
+  }
+
+  /**
+   * Create network timeout error response
+   * @returns {Object} Network timeout error (thrown as exception, not GraphQL response)
+   */
+  static createNetworkTimeoutError() {
+    const error = new Error('Request timeout');
+    error.code = 'ETIMEDOUT';
+    error.errno = -110;
+    error.syscall = 'connect';
+    return error;
+  }
+
+  /**
+   * Create empty repository response (no ADR files)
+   * @returns {Object} GraphQL response with empty entries array
+   */
+  static createEmptyRepositoryResponse() {
+    return {
+      repository: {
+        object: {
+          entries: []
+        }
+      }
+    };
+  }
+
+  /**
+   * Create response with missing object field (null object)
+   * @returns {Object} GraphQL response with null object field
+   */
+  static createNullObjectResponse() {
+    return {
+      repository: {
+        object: null
+      }
+    };
+  }
+
+  /**
+   * Create response without entries field
+   * @returns {Object} GraphQL response missing entries field
+   */
+  static createMissingEntriesResponse() {
+    return {
+      repository: {
+        object: {
+          // Missing entries field entirely
+        }
+      }
+    };
+  }
+
+  /**
+   * Create ADR files with missing text field
+   * @param {number} count - Number of malformed ADRs to create
+   * @returns {Object} GraphQL response with ADRs missing text field
+   */
+  static createMalformedADRResponse(count = 2) {
+    const entries = [];
+
+    for (let i = 0; i < count; i++) {
+      entries.push({
+        name: `${String(i + 1).padStart(4, '0')}-malformed-adr-${i + 1}.md`,
+        object: {
+          // Missing text field
+        }
+      });
+    }
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create ADR files with null content
+   * @param {number} count - Number of null content ADRs to create
+   * @returns {Object} GraphQL response with ADRs having null text
+   */
+  static createNullContentADRs(count = 2) {
+    const entries = [];
+
+    for (let i = 0; i < count; i++) {
+      entries.push({
+        name: `${String(i + 1).padStart(4, '0')}-null-content-adr-${i + 1}.md`,
+        object: {
+          text: null
+        }
+      });
+    }
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create corrupted JSON response structure
+   * @returns {Object} Malformed GraphQL response structure
+   */
+  static createCorruptedJSONResponse() {
+    return {
+      repository: {
+        object: {
+          entries: [
+            {
+              name: '0001-corrupted-structure.md',
+              // Missing object field
+            },
+            {
+              // Missing name field
+              object: {
+                text: 'Some content'
+              }
+            }
+          ]
+        }
+      }
+    };
+  }
+
+  /**
+   * Create partial data response (incomplete structure)
+   * @returns {Object} GraphQL response with incomplete data structure
+   */
+  static createPartialDataResponse() {
+    return {
+      repository: {
+        // Missing object field, but has other fields
+        name: 'test-repo',
+        description: 'Test repository'
+      }
+    };
+  }
+
+  /**
+   * Create large dataset response for performance testing
+   * @param {number} fileCount - Number of ADR files to generate
+   * @returns {Object} GraphQL response with large number of ADR files
+   */
+  static createLargeDatasetResponse(fileCount = 1000) {
+    const entries = [];
+
+    for (let i = 0; i < fileCount; i++) {
+      const title = `Large Dataset ADR ${i + 1}`;
+      const fileName = `${String(i + 1).padStart(4, '0')}-large-dataset-adr-${i + 1}.md`;
+
+      entries.push({
+        name: fileName,
+        object: {
+          text: this.createADRContent(title, 'open', {
+            impact: TEST_CONFIG.adr.impactLevels[i % 3],
+            tags: [`large-dataset`, `batch-${Math.floor(i / 100) + 1}`],
+            'review-by': `2024-${String((i % 12) + 1).padStart(2, '0')}-15`,
+            'decide-by': `2024-${String((i % 12) + 1).padStart(2, '0')}-28`
+          })
+        }
+      });
+    }
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create memory stress test data with large file content
+   * @param {number} fileCount - Number of files to create
+   * @param {number} contentSizeKB - Approximate size of each file in KB
+   * @returns {Object} GraphQL response with large content files
+   */
+  static createMemoryStressTestData(fileCount = 10, contentSizeKB = 100) {
+    const entries = [];
+    const largeContent = 'A'.repeat(contentSizeKB * 1024); // Create large content block
+
+    for (let i = 0; i < fileCount; i++) {
+      const title = `Memory Stress Test ADR ${i + 1}`;
+      const fileName = `${String(i + 1).padStart(4, '0')}-memory-stress-${i + 1}.md`;
+
+      // Create ADR with large content section
+      const content = `---
+status: open
+impact: medium
+reversibility: medium
+tags:
+  - memory-test
+  - large-content
+---
+# ${title}
+
+## Problem Description
+This is a memory stress test ADR with large content.
+
+## Large Content Section
+${largeContent}
+
+## Accepted Solution
+Testing memory handling with large file content.
+
+## Trade-offs
+Large content may impact memory usage and processing time.`;
+
+      entries.push({
+        name: fileName,
+        object: {
+          text: content
+        }
+      });
+    }
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create test data for async processing (array.reduce) testing
+   * @param {number} fileCount - Number of files to create
+   * @returns {Object} GraphQL response designed for async processing tests
+   */
+  static createAsyncProcessingTestData(fileCount = 20) {
+    const entries = [];
+
+    for (let i = 0; i < fileCount; i++) {
+      const title = `Async Processing Test ADR ${i + 1}`;
+      const fileName = `${String(i + 1).padStart(4, '0')}-async-test-${i + 1}.md`;
+      const status = TEST_CONFIG.adr.statuses[i % 4];
+
+      entries.push({
+        name: fileName,
+        object: {
+          text: this.createADRContent(title, status, {
+            impact: TEST_CONFIG.adr.impactLevels[i % 3],
+            tags: [`async-test`, `batch-${Math.floor(i / 5) + 1}`],
+            'committed-on': status === 'committed' ? '2024-01-15' : undefined,
+            'decide-by': status === 'open' ? '2024-04-01' : undefined
+          })
+        }
+      });
+    }
+
+    return {
+      repository: {
+        object: {
+          entries
+        }
+      }
+    };
+  }
+
+  /**
+   * Create ADRs with dates at filter boundaries
+   * @param {string} baseDate - Base date for boundary testing
+   * @returns {Array} Array of ADR objects with boundary dates
+   */
+  static createBoundaryDateADRs(baseDate = '2024-01-15') {
+    const baseDateObj = new Date(baseDate);
+    const oneDayBefore = new Date(baseDateObj.getTime() - 24 * 60 * 60 * 1000);
+    const oneDayAfter = new Date(baseDateObj.getTime() + 24 * 60 * 60 * 1000);
+
+    const scenarios = [
+      {
+        title: 'Boundary Date - Exact Match',
+        fileName: '0001-boundary-exact.md',
+        status: 'committed',
+        committedOn: baseDateObj.toISOString().split('T')[0]
+      },
+      {
+        title: 'Boundary Date - One Day Before',
+        fileName: '0002-boundary-before.md',
+        status: 'committed',
+        committedOn: oneDayBefore.toISOString().split('T')[0]
+      },
+      {
+        title: 'Boundary Date - One Day After',
+        fileName: '0003-boundary-after.md',
+        status: 'committed',
+        committedOn: oneDayAfter.toISOString().split('T')[0]
+      },
+      {
+        title: 'Boundary Date - Decide Exact',
+        fileName: '0004-boundary-decide-exact.md',
+        status: 'open',
+        decideBy: baseDateObj.toISOString().split('T')[0]
+      }
+    ];
+
+    return scenarios.map((scenario) => ({
+      name: scenario.fileName,
+      content: this.createADRContent(scenario.title, scenario.status, {
+        'committed-on': scenario.committedOn,
+        'decide-by': scenario.decideBy || '2024-04-01',
+        impact: 'medium',
+        tags: ['boundary-test', 'date-edge-case']
+      })
+    }));
+  }
+
+  /**
+   * Create ADRs with empty tag arrays
+   * @param {number} count - Number of ADRs with empty tags to create
+   * @returns {Array} Array of ADR objects with empty tag arrays
+   */
+  static createEmptyTagArrayADRs(count = 3) {
+    const adrs = [];
+
+    for (let i = 0; i < count; i++) {
+      const title = `Empty Tags ADR ${i + 1}`;
+      const fileName = `${String(i + 1).padStart(4, '0')}-empty-tags-${i + 1}.md`;
+
+      adrs.push({
+        name: fileName,
+        content: this.createADRContent(title, 'open', {
+          tags: [], // Empty array
+          impact: 'medium',
+          'decide-by': '2024-04-01'
+        })
+      });
+    }
+
+    return adrs;
+  }
+
+  /**
+   * Create ADRs with single character fields (minimal valid values)
+   * @returns {Array} Array of ADR objects with minimal field values
+   */
+  static createSingleCharacterFields() {
+    const scenarios = [
+      {
+        title: 'A', // Single character title
+        fileName: '0001-single-char-title.md',
+        status: 'open',
+        tags: ['a'], // Single character tag
+        impact: 'low'
+      },
+      {
+        title: 'Minimal Field Test',
+        fileName: '0002-minimal-fields.md',
+        status: 'committed',
+        tags: ['x', 'y', 'z'], // Single character tags
+        impact: 'high',
+        committedOn: '2024-01-01' // Minimal valid date
+      }
+    ];
+
+    return scenarios.map((scenario) => ({
+      name: scenario.fileName,
+      content: this.createADRContent(scenario.title, scenario.status, {
+        tags: scenario.tags,
+        impact: scenario.impact,
+        'committed-on': scenario.committedOn,
+        'decide-by': scenario.status === 'open' ? '2024-04-01' : undefined
+      })
+    }));
+  }
+
+  /**
+   * Create a mock Octokit instance with error injection capabilities
+   * @param {Object} errorScenarios - Configuration for different error scenarios
+   * @param {Object} responses - Standard responses (when not erroring)
+   * @returns {Object} Mock Octokit instance with error injection
+   */
+  static createMockOctokitWithErrors(errorScenarios = {}, responses = {}) {
+    const defaultResponses = {
+      graphql: this.createADRFilesResponse(),
+      createRef: this.createBranchResponse(),
+      getRef: { object: { sha: TEST_CONFIG.github.testShas.mainBranch } },
+      createOrUpdateFileContents: this.createFileResponse(),
+      createPullRequest: this.createPullRequestResponse()
+    };
+
+    const mockResponses = { ...defaultResponses, ...responses };
+
+    // Error injection configuration
+    const {
+      graphqlError = null,
+      networkError = null,
+      intermittentFailure = null,
+      rateLimitError = null
+    } = errorScenarios;
+
+    let callCount = 0;
+
+    // Create mock graphql function with error injection
+    const mockGraphQL = jest.fn().mockImplementation(() => {
+      callCount++;
+
+      // Handle intermittent failures
+      if (intermittentFailure && callCount % intermittentFailure.interval === 0) {
+        if (intermittentFailure.type === 'network') {
+          return Promise.reject(this.createNetworkTimeoutError());
+        } else if (intermittentFailure.type === 'graphql') {
+          return Promise.resolve(intermittentFailure.errorResponse);
+        }
+      }
+
+      // Handle specific error types
+      if (networkError && callCount <= (networkError.failCount || 1)) {
+        return Promise.reject(this.createNetworkTimeoutError());
+      }
+
+      if (rateLimitError && callCount <= (rateLimitError.failCount || 1)) {
+        return Promise.resolve(this.createRateLimitError());
+      }
+
+      if (graphqlError) {
+        return Promise.resolve(graphqlError);
+      }
+
+      // Return successful response
+      return Promise.resolve(mockResponses.graphql);
+    });
+
+    return {
+      graphql: mockGraphQL,
+      rest: {
+        git: {
+          createRef: jest.fn().mockResolvedValue({ data: mockResponses.createRef }),
+          getRef: jest.fn().mockResolvedValue({ data: mockResponses.getRef })
+        },
+        repos: {
+          createOrUpdateFileContents: jest.fn().mockResolvedValue({
+            data: mockResponses.createOrUpdateFileContents
+          })
+        },
+        pulls: {
+          create: jest.fn().mockResolvedValue({ data: mockResponses.createPullRequest })
+        }
+      }
+    };
+  }
+
   /**
    * Create a mock Octokit instance with predefined responses
    * @param {Object} responses - Object containing mock responses for different methods
