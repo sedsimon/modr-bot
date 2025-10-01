@@ -161,3 +161,5 @@ All agents work with GitHub Issues and Projects:
 - Check GitHub Issues and Projects for any questions about tasks or epics
 - Make sure to keep CLAUDE.md up to date with any changes you make to the codebase
 - Use yarn instead of npm when possible
+- setting the "type" of an issue in github refers to setting the Type custom field, not adding a label. There are two possible values, Task and Epic.
+- if your task is to implement tests, do not also write tests for the tests! We write tests for business logic only.
