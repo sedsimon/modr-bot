@@ -1,6 +1,7 @@
 import { describe, test, expect } from '@jest/globals';
 import { loadFixture, loadADRFixture, createMockOctokit } from './utils/testHelpers.js';
 import { MockFactory } from './utils/mockFactory.js';
+import { GitHubResponses } from './utils/mockFactory/githubResponses.js';
 import { TEST_CONFIG, getTestEnvironment, getADRTestData } from './config/testConfig.js';
 
 describe('Test Fixtures and Utilities', () => {
@@ -91,24 +92,24 @@ describe('Test Fixtures and Utilities', () => {
     });
 
     test('should create GitHub branch response', () => {
-      const response = MockFactory.createBranchResponse('feature/test');
-      
+      const response = GitHubResponses.createBranchResponse('feature/test');
+
       expect(response.ref).toBe('refs/heads/feature/test');
       expect(response.object.sha).toBeDefined();
       expect(response.url).toContain('test-user/test-repo');
     });
 
     test('should create GitHub file response', () => {
-      const response = MockFactory.createFileResponse('test.md');
-      
+      const response = GitHubResponses.createFileResponse('test.md');
+
       expect(response.content.name).toBe('test.md');
       expect(response.content.path).toContain('docs/decisions/test.md');
       expect(response.commit.sha).toBeDefined();
     });
 
     test('should create pull request response', () => {
-      const response = MockFactory.createPullRequestResponse(123, 'Test PR');
-      
+      const response = GitHubResponses.createPullRequestResponse(123, 'Test PR');
+
       expect(response.number).toBe(123);
       expect(response.title).toBe('Test PR');
       expect(response.html_url).toContain('/pull/123');
