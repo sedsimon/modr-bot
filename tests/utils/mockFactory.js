@@ -1,6 +1,5 @@
 import { TEST_CONFIG } from '../config/testConfig.js';
 import { jest } from '@jest/globals';
-import { GitHubResponses } from './mockFactory/githubResponses.js';
 
 /**
  * Factory for creating consistent mock data across tests
@@ -86,39 +85,6 @@ This is a test solution for the ${title} decision.
 Some trade-offs for this decision.`;
   }
 
-  /**
-   * Create a mock GitHub branch response
-   * @deprecated Use GitHubResponses.createBranchResponse() instead
-   * @param {string} branchName - Name of the branch
-   * @param {string} sha - SHA of the branch head
-   * @returns {Object} Mock branch response
-   */
-  static createBranchResponse(branchName, sha) {
-    return GitHubResponses.createBranchResponse(branchName, sha);
-  }
-
-  /**
-   * Create a mock GitHub file creation response
-   * @deprecated Use GitHubResponses.createFileResponse() instead
-   * @param {string} fileName - Name of the created file
-   * @param {string} filePath - Path of the created file
-   * @returns {Object} Mock file creation response
-   */
-  static createFileResponse(fileName, filePath) {
-    return GitHubResponses.createFileResponse(fileName, filePath);
-  }
-
-  /**
-   * Create a mock GitHub Pull Request response
-   * @deprecated Use GitHubResponses.createPullRequestResponse() instead
-   * @param {number} prNumber - PR number
-   * @param {string} title - PR title
-   * @param {string} branchName - Source branch name
-   * @returns {Object} Mock PR response
-   */
-  static createPullRequestResponse(prNumber, title, branchName) {
-    return GitHubResponses.createPullRequestResponse(prNumber, title, branchName);
-  }
 
   /**
    * Create a mock Slack command payload
@@ -1575,156 +1541,6 @@ Complex tag parsing may affect search and filtering functionality.`;
     return adrs;
   }
 
-  // ====================================================================
-  // ERROR RESPONSE METHODS FOR COMPREHENSIVE getAdrFiles() ERROR TESTING
-  // ====================================================================
-
-  /**
-   * Create a standard GraphQL error response structure
-   * @deprecated Use GitHubResponses.createGraphQLErrorResponse() instead
-   * @param {string} errorType - Type of GraphQL error (e.g., 'NOT_FOUND', 'FORBIDDEN')
-   * @param {string} message - Error message
-   * @param {Array} path - GraphQL path where error occurred
-   * @returns {Object} GraphQL error response structure
-   */
-  static createGraphQLErrorResponse(errorType, message, path) {
-    return GitHubResponses.createGraphQLErrorResponse(errorType, message, path);
-  }
-
-  /**
-   * Create repository not found error response
-   * @deprecated Use GitHubResponses.createRepositoryNotFoundError() instead
-   * @param {string} repoName - Repository name that was not found
-   * @returns {Object} GraphQL error response for repository not found
-   */
-  static createRepositoryNotFoundError(repoName) {
-    return GitHubResponses.createRepositoryNotFoundError(repoName);
-  }
-
-  /**
-   * Create authentication error response
-   * @deprecated Use GitHubResponses.createAuthenticationError() instead
-   * @returns {Object} GraphQL error response for authentication failure
-   */
-  static createAuthenticationError() {
-    return GitHubResponses.createAuthenticationError();
-  }
-
-  /**
-   * Create rate limit error response
-   * @deprecated Use GitHubResponses.createRateLimitError() instead
-   * @param {number} resetTime - Unix timestamp when rate limit resets
-   * @returns {Object} GraphQL error response for rate limiting
-   */
-  static createRateLimitError(resetTime) {
-    return GitHubResponses.createRateLimitError(resetTime);
-  }
-
-  /**
-   * Create network timeout error response
-   * @deprecated Use GitHubResponses.createNetworkTimeoutError() instead
-   * @returns {Object} Network timeout error (thrown as exception, not GraphQL response)
-   */
-  static createNetworkTimeoutError() {
-    return GitHubResponses.createNetworkTimeoutError();
-  }
-
-  /**
-   * Create empty repository response (no ADR files)
-   * @deprecated Use GitHubResponses.createEmptyRepositoryResponse() instead
-   * @returns {Object} GraphQL response with empty entries array
-   */
-  static createEmptyRepositoryResponse() {
-    return GitHubResponses.createEmptyRepositoryResponse();
-  }
-
-  /**
-   * Create response with missing object field (null object)
-   * @deprecated Use GitHubResponses.createNullObjectResponse() instead
-   * @returns {Object} GraphQL response with null object field
-   */
-  static createNullObjectResponse() {
-    return GitHubResponses.createNullObjectResponse();
-  }
-
-  /**
-   * Create response without entries field
-   * @deprecated Use GitHubResponses.createMissingEntriesResponse() instead
-   * @returns {Object} GraphQL response missing entries field
-   */
-  static createMissingEntriesResponse() {
-    return GitHubResponses.createMissingEntriesResponse();
-  }
-
-  /**
-   * Create ADR files with missing text field
-   * @deprecated Use GitHubResponses.createMalformedADRResponse() instead
-   * @param {number} count - Number of malformed ADRs to create
-   * @returns {Object} GraphQL response with ADRs missing text field
-   */
-  static createMalformedADRResponse(count) {
-    return GitHubResponses.createMalformedADRResponse(count);
-  }
-
-  /**
-   * Create ADR files with null content
-   * @deprecated Use GitHubResponses.createNullContentADRs() instead
-   * @param {number} count - Number of null content ADRs to create
-   * @returns {Object} GraphQL response with ADRs having null text
-   */
-  static createNullContentADRs(count) {
-    return GitHubResponses.createNullContentADRs(count);
-  }
-
-  /**
-   * Create corrupted JSON response structure
-   * @deprecated Use GitHubResponses.createCorruptedJSONResponse() instead
-   * @returns {Object} Malformed GraphQL response structure
-   */
-  static createCorruptedJSONResponse() {
-    return GitHubResponses.createCorruptedJSONResponse();
-  }
-
-  /**
-   * Create partial data response (incomplete structure)
-   * @deprecated Use GitHubResponses.createPartialDataResponse() instead
-   * @returns {Object} GraphQL response with incomplete data structure
-   */
-  static createPartialDataResponse() {
-    return GitHubResponses.createPartialDataResponse();
-  }
-
-  /**
-   * Create large dataset response for performance testing
-   * @deprecated Use GitHubResponses.createLargeDatasetResponse() instead
-   * @param {number} fileCount - Number of ADR files to generate
-   * @returns {Object} GraphQL response with large number of ADR files
-   */
-  static createLargeDatasetResponse(fileCount) {
-    return GitHubResponses.createLargeDatasetResponse(fileCount, this.createADRContent.bind(this));
-  }
-
-  /**
-   * Create memory stress test data with large file content
-   * @deprecated Use GitHubResponses.createMemoryStressTestData() instead
-   * @param {number} fileCount - Number of files to create
-   * @param {number} contentSizeKB - Approximate size of each file in KB
-   * @returns {Object} GraphQL response with large content files
-   */
-  static createMemoryStressTestData(fileCount, contentSizeKB) {
-    return GitHubResponses.createMemoryStressTestData(fileCount, contentSizeKB);
-  }
-
-  /**
-   * Create test data for async processing (array.reduce) testing
-   * @deprecated Use GitHubResponses.createAsyncProcessingTestData() instead
-   * @param {number} fileCount - Number of files to create
-   * @returns {Object} GraphQL response designed for async processing tests
-   */
-  static createAsyncProcessingTestData(fileCount) {
-    return GitHubResponses.createAsyncProcessingTestData(fileCount, this.createADRContent.bind(this));
-  }
-
   /**
    * Create ADRs with dates at filter boundaries
    * @param {string} baseDate - Base date for boundary testing
@@ -1830,26 +1646,5 @@ Complex tag parsing may affect search and filtering functionality.`;
         'decide-by': scenario.status === 'open' ? '2024-04-01' : undefined
       })
     }));
-  }
-
-  /**
-   * Create a mock Octokit instance with error injection capabilities
-   * @deprecated Use GitHubResponses.createMockOctokitWithErrors() instead
-   * @param {Object} errorScenarios - Configuration for different error scenarios
-   * @param {Object} responses - Standard responses (when not erroring)
-   * @returns {Object} Mock Octokit instance with error injection
-   */
-  static createMockOctokitWithErrors(errorScenarios, responses) {
-    return GitHubResponses.createMockOctokitWithErrors(errorScenarios, responses, this.createADRFilesResponse.bind(this));
-  }
-
-  /**
-   * Create a mock Octokit instance with predefined responses
-   * @deprecated Use GitHubResponses.createMockOctokit() instead
-   * @param {Object} responses - Object containing mock responses for different methods
-   * @returns {Object} Mock Octokit instance
-   */
-  static createMockOctokit(responses) {
-    return GitHubResponses.createMockOctokit(responses, this.createADRFilesResponse.bind(this));
   }
 }
