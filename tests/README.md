@@ -69,11 +69,15 @@ const slackCommand = createMockSlackCommand({ text: 'log --status open' });
 
 ```javascript
 import { MockFactory } from './utils/mockFactory.js';
+import { GitHubResponses } from './utils/mockFactory/githubResponses.js';
 
-// Create mock GitHub responses
+// Create mock ADR responses
 const adrFilesResponse = MockFactory.createADRFilesResponse();
-const branchResponse = MockFactory.createBranchResponse('feature/test');
-const prResponse = MockFactory.createPullRequestResponse(123, 'Test PR');
+
+// Create mock GitHub API responses (branches, files, PRs)
+const branchResponse = GitHubResponses.createBranchResponse('feature/test');
+const prResponse = GitHubResponses.createPullRequestResponse(123, 'Test PR');
+const fileResponse = GitHubResponses.createFileResponse('0001-new-adr.md');
 
 // Create mock Slack payloads
 const slackCommand = MockFactory.createSlackCommand('log --status open');
@@ -106,6 +110,7 @@ const committedADR = getADRTestData('committed');
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { loadADRFixture, setupTestEnvironment } from './utils/testHelpers.js';
 import { MockFactory } from './utils/mockFactory.js';
+import { GitHubResponses } from './utils/mockFactory/githubResponses.js';
 
 describe('Your Module', () => {
   beforeEach(() => {
@@ -116,12 +121,12 @@ describe('Your Module', () => {
   test('should handle ADR data correctly', async () => {
     // Load test fixture
     const { content, ast } = await loadADRFixture('0001-test-adr-open.md');
-    
+
     // Create mock responses
-    const mockOctokit = MockFactory.createMockOctokit({
+    const mockOctokit = GitHubResponses.createMockOctokit({
       graphql: MockFactory.createADRFilesResponse()
     });
-    
+
     // Your test logic here
     expect(content).toContain('status: open');
   });
