@@ -1,14 +1,14 @@
 import { describe, test, expect } from '@jest/globals';
 import { toBlockFormat } from '../../lib/blockFormatter.js';
+import { AdrBuilder } from '../builders/adrBuilder.js';
 
 describe('blockFormatter', () => {
   describe('toBlockFormat', () => {
     test('should return basic block structure with divider', () => {
-      const adrFile = {
-        name: 'test-adr.md',
-        githubUrl: 'https://github.com/test/repo/blob/main/test-adr.md',
-        data: {}
-      };
+      const adrFile = new AdrBuilder()
+        .withName('test-adr.md')
+        .withGithubUrl('https://github.com/test/repo/blob/main/test-adr.md')
+        .buildMinimal();
 
       const result = toBlockFormat(adrFile);
 
@@ -19,17 +19,16 @@ describe('blockFormatter', () => {
     });
 
     test('should format ADR title with GitHub link and List PRs button', () => {
-      const adrFile = {
-        name: '0001-api-design.md',
-        githubUrl: 'https://github.com/test/repo/blob/main/0001-api-design.md',
-        data: {
-          title: 'API Design Pattern for Data Access'
-        }
-      };
+      const adrFile = new AdrBuilder()
+        .withName('0001-api-design.md')
+        .withGithubUrl('https://github.com/test/repo/blob/main/0001-api-design.md')
+        .withTitle('API Design Pattern for Data Access')
+        .buildMinimal();
 
       const result = toBlockFormat(adrFile);
 
-      expect(result).toHaveLength(2);
+      // buildMinimal includes status frontmatter, which creates a context block
+      expect(result).toHaveLength(3);
       expect(result[1]).toEqual({
         type: "section",
         text: {
@@ -46,6 +45,7 @@ describe('blockFormatter', () => {
           action_id: "list prs action"
         }
       });
+      expect(result[2].type).toBe("context"); // Status context block
     });
 
     test('should format Problem Description section', () => {
@@ -98,24 +98,24 @@ describe('blockFormatter', () => {
     });
 
     test('should format complete ADR with all sections', () => {
-      const adrFile = {
-        name: '0001-api-design.md',
-        githubUrl: 'https://github.com/test/repo/blob/main/0001-api-design.md',
-        data: {
-          title: 'API Design Pattern for Data Access',
-          'Problem Description': 'We need to establish a consistent pattern for accessing data.',
-          'Accepted Solution': 'Implement a standardized GraphQL API gateway pattern.'
-        }
-      };
+      const adrFile = new AdrBuilder()
+        .withName('0001-api-design.md')
+        .withGithubUrl('https://github.com/test/repo/blob/main/0001-api-design.md')
+        .withTitle('API Design Pattern for Data Access')
+        .withProblemDescription('We need to establish a consistent pattern for accessing data.')
+        .withAcceptedSolution('Implement a standardized GraphQL API gateway pattern.')
+        .build();
 
       const result = toBlockFormat(adrFile);
 
-      expect(result).toHaveLength(5);
+      // Builder includes default frontmatter, so we get an extra context block (6 total)
+      expect(result).toHaveLength(6);
       expect(result[0].type).toBe("divider");
       expect(result[1].text.text).toContain("API Design Pattern for Data Access");
       expect(result[2].text.text).toBe('We need to establish a consistent pattern for accessing data.');
       expect(result[3].text.text).toBe("*Accepted Solution*");
       expect(result[4].text.text).toBe('Implement a standardized GraphQL API gateway pattern.');
+      expect(result[5].type).toBe("context"); // Context block with frontmatter
     });
 
     describe('frontmatter context blocks', () => {
